@@ -61,10 +61,6 @@ int main(){
 
 		printf("%s\n", buffer);
 
-		memset(buffer, 0, sizeof buffer);
-
-		scanf("%[^\n]", buffer);
-		scanf("%*c");
 		send(NewSocket, buffer, strlen(buffer), 0);
 		
 	}
