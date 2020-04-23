@@ -9,7 +9,7 @@ int main(){
 
 	int NewServer, NewSocket;
 	struct sockaddr_in SocketAddress;
-    	int addrlen = sizeof SocketAddress;
+	int addrlen = sizeof SocketAddress;
 
 	//Create a socket
 	NewServer = socket(AF_INET, SOCK_STREAM, 0);
