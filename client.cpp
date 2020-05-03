@@ -30,7 +30,7 @@ int main(){
 		return 0;
 	}
 
-	char buffer[2050]; //buffer para enviar e receber mensagens
+	char buffer[4096]; //buffer para enviar e receber mensagens
 	bool flag = false;
 	memset(buffer, 0, sizeof buffer); //zerando o buffer
 	int ret = read(NewSocket, buffer, sizeof buffer); //recebendo a mensagem de boas vindas do servidor para testes
