@@ -45,7 +45,7 @@ int main(){
 	
 		
 	char welcome[20] = "Welcome to server";
-	char buffer[4096];
+	char buffer[2050];
 
 	send(NewSocket, welcome, strlen(welcome), 0);
 
@@ -59,10 +59,9 @@ int main(){
 			break;
 		}
 
-		printf("%s\n", buffer);
+		printf("Client: %s\n", buffer);
 
 		send(NewSocket, buffer, strlen(buffer), 0);
-		
 	}
 
 	return 0;

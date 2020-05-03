@@ -29,8 +29,8 @@ int main(){
 		return 0;
 	}
 
-	char buffer[4096];
-
+	char buffer[2050];
+	bool flag = false;
 	memset(buffer, 0, sizeof buffer);
 	int ret = read(NewSocket, buffer, sizeof buffer);
 
@@ -39,22 +39,48 @@ int main(){
 	while(true){
 		memset(buffer, 0, sizeof buffer);
 
-		scanf("%[^\n]", buffer);
-		scanf("%*c");
+		char c;
+		int i = 0;
 		
-		if(strcmp(buffer, "quit") == 0) break;
+		printf("Client: ");
+		scanf("%c", &c);
+		
+		while(c != '\n'){
+			buffer[i] = c;	
+			i = (i+1)%2048;
+			if(strlen(buffer) == 2048){
+				if(strcmp(buffer, "quit") == 0){
+					flag = true;
+					break;	
+				}
+				send(NewSocket, buffer, strlen(buffer), 0);
 
+				memset(buffer, 0, sizeof buffer);
+				
+				int ret1 = read(NewSocket, buffer, sizeof buffer);
+				if(ret1 <= 0){
+					flag = true;
+					break;
+				}
+				
+				printf("Server: %s\n",buffer);
+				memset(buffer, 0, sizeof buffer);
+			}
+			scanf("%c", &c);	
+		}
+		
+		if(strcmp(buffer, "quit") == 0)flag = true;
+		if(flag) break;
+		
 		send(NewSocket, buffer, strlen(buffer), 0);
-
+				
 		memset(buffer, 0, sizeof buffer);
 
 		int ret = read(NewSocket, buffer, sizeof buffer);
-
 		if(ret <= 0){
 			break;
 		}
-
-		printf("%s\n", buffer);
+		printf("Server: %s\n", buffer);
 	}
 
 	close(NewSocket);
