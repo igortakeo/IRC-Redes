@@ -9,7 +9,6 @@ int main(){
 
 	int NewSocket;
 	struct sockaddr_in ServerAddress;
-	printf("jaskd");
 
 	//Criando um socket
 	NewSocket = socket(AF_INET, SOCK_STREAM, 0);
