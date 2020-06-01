@@ -4,6 +4,8 @@
 #include <stdlib.h> 
 #include <netinet/in.h> 
 #include <string.h> 
+#include <iostream>
+using namespace std;
 
 int main(){
 
@@ -29,20 +31,33 @@ int main(){
 		printf("Connection Failed\n");
 		return 0;
 	}
-
+	
+	string nick;
 	char buffer[4096]; //buffer para enviar e receber mensagens
 	bool flag = false;
+	int ret;
 	memset(buffer, 0, sizeof buffer); //zerando o buffer
-	int ret = read(NewSocket, buffer, sizeof buffer); //recebendo a mensagem de boas vindas do servidor para testes
-
+	
+	ret = read(NewSocket, buffer, sizeof buffer); //recebendo a mensagem de boas vindas do servidor para testes
 	printf("%s\n", buffer); // printando a mensagem
-
+	
+	
 	while(true){
+		cin >> nick;
+		send(NewSocket, nick.c_str(), nick.size(), 0); //Enviando para o servidor o nickname
+		scanf("%*c");	
+		memset(buffer, 0, sizeof buffer); //Zerando o buffer	
+		ret = read(NewSocket, buffer, sizeof buffer); //Recebendo o retorno da verificacao do nickname
+		printf("%s\n", buffer);
+		if(strcmp(buffer,"Nickname accepted") == 0) break; //Verificando se o nickname foi aceito
+	}
+	
+	while(true){
+		
 		memset(buffer, 0, sizeof buffer); //reiniciando o servidor
 
 		char c; //caractere auxiliar
 		int i = 0;
-		
 		printf("Client: ");
 		scanf("%c", &c);
 		
@@ -64,7 +79,6 @@ int main(){
 					flag = true;
 					break;
 				}
-				
 				printf("Server: %s\n",buffer); //escreve a resposta do servidor
 				memset(buffer, 0, sizeof buffer);
 			}

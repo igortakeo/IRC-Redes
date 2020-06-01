@@ -4,6 +4,96 @@
 #include <stdlib.h> 
 #include <netinet/in.h> 
 #include <string.h> 
+#include <thread>
+#include <map>
+#include <iostream>
+#include <vector>
+#include <set>
+using namespace std;
+
+//O map Clients armazena a dupla id do cliente e o seu nickname.
+map<int, string>Clients; 
+set<string>Nicknames;
+//O vector IdClients armazena todos os ids dos clientes que estao conectados.
+vector<int>IdClients; 
+
+//Parte comentada  nao esta funcionando 
+/*
+void MessageClients(){	
+	char buffer[2050]; //Buffer para escrever e retornar as mensagens ao cliente
+	while(true){
+		memset(buffer, 0, sizeof buffer); //Zera o buffer
+		if(!IdClients.empty()){
+			for(int i=0;;i=(i+1)%IdClients.size()){	
+				int ret = 0;
+				ret  = read(IdClients[i], buffer, sizeof buffer); //Recebe a mensagem enviada pelo cliente
+				cout << i << endl;
+				if(ret <= 0) continue;
+				printf("Client: %s\n", buffer); //Escreve a mensagem recebida
+				send(IdClients[i], buffer, strlen(buffer), 0); //A reenvia para o cliente
+			}
+		}
+	}
+	
+}
+*/
+void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
+	char message_welcome[50] = "Welcome to server\nInsert your Nickname: ";
+	char message_accept[50] = "Nickname accepted";
+	char message_error_nickame[50] = "Nickname already exist\nInsert your Nickname: ";
+	char buffer[2050];
+	while(true){
+		//Aguarda a entrada de um cliente
+		if(listen(NewServer, SOMAXCONN) == -1){
+			printf("Error for Listening\n");
+			continue;
+		}		
+		//Zera o buffer
+		memset(buffer, 0, sizeof buffer);
+		
+		//Aceita o cliente
+		int NewClient = accept(NewServer, (struct sockaddr*)&SocketAddress, (socklen_t*)&addrlen);
+	
+		//Se falhar, retorna
+		if(NewClient == -1){
+			printf("Accept Failed\n");
+			continue;
+		}
+		
+		//Envia mensagem de boas vindas ao cliente
+		send(NewClient, message_welcome, strlen(message_welcome), 0);
+		
+		
+		string nick;
+		
+		while(true){
+			//Lendo nickname do cliente
+			int ret = read(NewClient, buffer , sizeof buffer);
+			
+			//Transformando pra std::string
+			nick.append(buffer, buffer+strlen(buffer));
+			
+			//Verificando se o nickname ja existe	
+			if(Nicknames.count(nick) == 0) break;
+			
+			//Enviando a mensagem de erro para o cliente
+			send(NewClient, message_error_nickame, strlen(message_error_nickame), 0);
+		}	
+	
+		//Relacionando o id do cliente com o seu nickname
+		Clients[NewClient] = nick;
+		
+		//Guardando o id do cliente no vetor de clientes
+		IdClients.push_back(NewClient);
+		
+		//Guardando no Conjunto de Nicks
+		Nicknames.insert(nick);
+		
+		//Mandando a mensagem que o nickname foi aceito
+		send(NewClient, message_accept, strlen(message_accept), 0);
+	}
+	
+}
 
 int main(){
 
@@ -18,8 +108,7 @@ int main(){
 		printf("Creating Failed\n");
 		return 0;
 	}
-
-	//Vincula o socket 'a porta 8080
+	//Vincula o socket a porta 8080
 	SocketAddress.sin_family = AF_INET;
 	SocketAddress.sin_addr.s_addr = INADDR_ANY;	
 	SocketAddress.sin_port = htons(8080);
@@ -30,41 +119,10 @@ int main(){
 		return 0;
 	}
 
-	//Aguarda a entrada de um cliente
-	if(listen(NewServer, SOMAXCONN) == -1){
-		printf("Error for Listening\n");
-		return 0;
-	}
-
-	//Aceita o cliente
-	NewSocket = accept(NewServer, (struct sockaddr*)&SocketAddress, (socklen_t*)&addrlen);
-
-	//Se falhar, retorna
-	if(NewSocket == -1){
-		printf("Accept Failed\n");
-		return 0;
-	}
 	
-	//Envia mensagem de boas vindas ao cliente
-	char welcome[20] = "Welcome to server";
-	char buffer[2050]; //Buffer para escrever e retornar as mensagens ao cliente
-
-	send(NewSocket, welcome, strlen(welcome), 0);
-
-	while(true){
-		
-		memset(buffer, 0, sizeof buffer); //Zera o buffer
-		
-		int ret = read(NewSocket, buffer, sizeof buffer); //Recebe a mensagem enviada pelo cliente
-
-		if(ret <= 0){
-			break;
-		}
-
-		printf("Client: %s\n", buffer); //Escreve a mensagem recebida
-
-		send(NewSocket, buffer, strlen(buffer), 0); //A reenvia para o cliente
-	}
-
+	thread ThreadAccept(AcceptClient, NewServer, SocketAddress, addrlen);
+	//thread ThreadMessages(MessageClients);
+	ThreadAccept.join();
+	//ThreadMessages.join();
 	return 0;
 }
