@@ -1,7 +1,8 @@
 #include <unistd.h> 
 #include <stdio.h> 
 #include <sys/socket.h> 
-#include <stdlib.h> 
+#include <stdlib.h>
+#include <arpa/inet.h>  
 #include <netinet/in.h> 
 #include <string.h> 
 #include <iostream>
@@ -23,7 +24,7 @@ int main(){
 
 	ServerAddress.sin_family = AF_INET;
 	ServerAddress.sin_port = htons(8080);
-
+	//ServerAddress.sin_addr.s_addr = inet_addr("159.89.214.31");	
 	//Conectando o cliente a porta 8080
 	int retConnect = connect(NewSocket, (struct sockaddr*)&ServerAddress, sizeof ServerAddress);
 
@@ -32,7 +33,7 @@ int main(){
 		return 0;
 	}
 	
-	string nick;
+	string nick;	
 	char buffer[4096]; //buffer para enviar e receber mensagens
 	bool flag = false;
 	int ret;
@@ -44,12 +45,12 @@ int main(){
 	
 	while(true){
 		cin >> nick;
-		send(NewSocket, nick.c_str(), nick.size(), 0); //Enviando para o servidor o nickname
+		send(NewSocket, nick.c_str(), nick.size(), 0); //Enviando para o servido o nickname
 		scanf("%*c");	
-		memset(buffer, 0, sizeof buffer); //Zerando o buffer	
-		ret = read(NewSocket, buffer, sizeof buffer); //Recebendo o retorno da verificacao do nickname
+		memset(buffer, 0, sizeof buffer); //zerando o buffer	
+		ret = read(NewSocket, buffer, sizeof buffer); //recebendo a mensagem de boas vindas do servidor para testes
 		printf("%s\n", buffer);
-		if(strcmp(buffer,"Nickname accepted") == 0) break; //Verificando se o nickname foi aceito
+		if(strcmp(buffer,"Nickname accepted") == 0) break; // Verificando se o Nickname foi aceito
 	}
 	
 	while(true){

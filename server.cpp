@@ -1,6 +1,7 @@
 #include <unistd.h> 
 #include <stdio.h> 
-#include <sys/socket.h> 
+#include <sys/socket.h>
+#include <arpa/inet.h> 
 #include <stdlib.h> 
 #include <netinet/in.h> 
 #include <string.h> 
@@ -47,23 +48,24 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 		if(listen(NewServer, SOMAXCONN) == -1){
 			printf("Error for Listening\n");
 			continue;
-		}		
+		}
+		 		
 		//Zera o buffer
 		memset(buffer, 0, sizeof buffer);
 		
 		//Aceita o cliente
 		int NewClient = accept(NewServer, (struct sockaddr*)&SocketAddress, (socklen_t*)&addrlen);
-	
+		
 		//Se falhar, retorna
 		if(NewClient == -1){
 			printf("Accept Failed\n");
 			continue;
 		}
+		cout << "aloo" << endl;
 		
 		//Envia mensagem de boas vindas ao cliente
 		send(NewClient, message_welcome, strlen(message_welcome), 0);
-		
-		
+			
 		string nick;
 		
 		while(true){
@@ -82,7 +84,7 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 	
 		//Relacionando o id do cliente com o seu nickname
 		Clients[NewClient] = nick;
-		
+		cout << nick << endl;
 		//Guardando o id do cliente no vetor de clientes
 		IdClients.push_back(NewClient);
 		
@@ -110,7 +112,7 @@ int main(){
 	}
 	//Vincula o socket a porta 8080
 	SocketAddress.sin_family = AF_INET;
-	SocketAddress.sin_addr.s_addr = INADDR_ANY;	
+	SocketAddress.sin_addr.s_addr = INADDR_ANY;
 	SocketAddress.sin_port = htons(8080);
 	
 	//Se falhar, retorna
@@ -118,7 +120,6 @@ int main(){
 		printf("Bind Failed\n");
 		return 0;
 	}
-
 	
 	thread ThreadAccept(AcceptClient, NewServer, SocketAddress, addrlen);
 	//thread ThreadMessages(MessageClients);
