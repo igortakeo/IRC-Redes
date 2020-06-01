@@ -23,8 +23,8 @@ int main(){
 	}
 
 	ServerAddress.sin_family = AF_INET;
-	ServerAddress.sin_port = htons(8080);
-	//ServerAddress.sin_addr.s_addr = inet_addr("159.89.214.31");	
+	ServerAddress.sin_port = htons(80);
+	ServerAddress.sin_addr.s_addr = inet_addr("159.89.214.31");	
 	//Conectando o cliente a porta 8080
 	int retConnect = connect(NewSocket, (struct sockaddr*)&ServerAddress, sizeof ServerAddress);
 
