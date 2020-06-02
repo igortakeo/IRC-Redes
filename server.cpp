@@ -44,12 +44,6 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 	char message_error_nickame[50] = "Nickname already exist\nInsert your Nickname: ";
 	char buffer[2050];
 	while(true){
-		//Aguarda a entrada de um cliente
-		if(listen(NewServer, SOMAXCONN) == -1){
-			printf("Error for Listening\n");
-			continue;
-		}
-		 		
 		//Zera o buffer
 		memset(buffer, 0, sizeof buffer);
 		
@@ -61,7 +55,6 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 			printf("Accept Failed\n");
 			continue;
 		}
-		cout << "aloo" << endl;
 		
 		//Envia mensagem de boas vindas ao cliente
 		send(NewClient, message_welcome, strlen(message_welcome), 0);
@@ -84,6 +77,7 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 	
 		//Relacionando o id do cliente com o seu nickname
 		Clients[NewClient] = nick;
+		
 		cout << nick << endl;
 		//Guardando o id do cliente no vetor de clientes
 		IdClients.push_back(NewClient);
@@ -114,10 +108,15 @@ int main(){
 	SocketAddress.sin_family = AF_INET;
 	SocketAddress.sin_addr.s_addr = INADDR_ANY;
 	SocketAddress.sin_port = htons(8080);
-	
 	//Se falhar, retorna
 	if(bind(NewServer, (struct sockaddr*)&SocketAddress, sizeof SocketAddress) == -1){
 		printf("Bind Failed\n");
+		return 0;
+	}
+
+	//Aguarda a entrada de um cliente
+	if(listen(NewServer, SOMAXCONN) == -1){
+		printf("Error for Listening\n");
 		return 0;
 	}
 	
