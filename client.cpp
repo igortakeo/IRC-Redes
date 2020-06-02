@@ -5,8 +5,46 @@
 #include <arpa/inet.h>  
 #include <netinet/in.h> 
 #include <string.h> 
+#include <thread>
 #include <iostream>
 using namespace std;
+
+void ReceiveWelcome(int NewSocket){
+	string nick;	
+
+	char buffer[2050];
+	memset(buffer, 0, sizeof buffer);
+	int ret = read(NewSocket, buffer, sizeof buffer); //recebendo a mensagem de boas vindas do servidor para testes
+	printf("%s\n", buffer); // printando a mensagem
+
+	while(true){
+		cin >> nick;
+		send(NewSocket, nick.c_str(), nick.size(), 0); //Enviando para o servido o nickname
+		scanf("%*c");	
+		memset(buffer, 0, sizeof buffer); //zerando o buffer	
+		ret = read(NewSocket, buffer, sizeof buffer); //recebendo a mensagem de boas vindas do servidor para testes
+		printf("%s\n", buffer);
+		if(strcmp(buffer,"Nickname accepted") == 0) break; // Verificando se o Nickname foi aceito
+	}
+}
+
+void ReceiveMessages(int NewSocket){
+
+	char message[2050];
+	memset(message, 0, sizeof message);
+
+	while(true){
+		int receive = read(NewSocket, message, sizeof message);
+    	if (receive > 0){
+      		printf("%s\n", message);
+		}
+    	else if (receive == 0){
+			break;
+   	 	} 
+		memset(message, 0, sizeof(message));
+  	}
+}
+
 
 int main(){
 
@@ -23,7 +61,7 @@ int main(){
 	}
 
 	ServerAddress.sin_family = AF_INET;
-	ServerAddress.sin_port = htons(3000);
+	ServerAddress.sin_port = htons(8080);
 	//ServerAddress.sin_addr.s_addr = inet_addr("159.89.214.31");	
 	//Conectando o cliente a porta 1048
 	int retConnect = connect(NewSocket, (struct sockaddr*)&ServerAddress, sizeof ServerAddress);
@@ -34,33 +72,23 @@ int main(){
 	}
 	
 	
-	string nick;	
 	char buffer[4096]; //buffer para enviar e receber mensagens
 	bool flag = false;
 	int ret;
 	memset(buffer, 0, sizeof buffer); //zerando o buffer
 	
-	ret = read(NewSocket, buffer, sizeof buffer); //recebendo a mensagem de boas vindas do servidor para testes
-	printf("%s\n", buffer); // printando a mensagem
-	
-	
-	while(true){
-		cin >> nick;
-		send(NewSocket, nick.c_str(), nick.size(), 0); //Enviando para o servido o nickname
-		scanf("%*c");	
-		memset(buffer, 0, sizeof buffer); //zerando o buffer	
-		ret = read(NewSocket, buffer, sizeof buffer); //recebendo a mensagem de boas vindas do servidor para testes
-		printf("%s\n", buffer);
-		if(strcmp(buffer,"Nickname accepted") == 0) break; // Verificando se o Nickname foi aceito
-	}
-		
+	thread ReceiveReception(ReceiveWelcome, NewSocket);
+	ReceiveReception.join();
+
 	while(true){
 		
-		memset(buffer, 0, sizeof buffer); //reiniciando o servidor
+		thread Receive(ReceiveMessages, NewSocket);
+		Receive.detach();
+
+		memset(buffer, 0, sizeof buffer); //reiniciando o buffer
 
 		char c; //caractere auxiliar
 		int i = 0;
-		printf("Client: ");
 		scanf("%c", &c);
 		
 		while(c != '\n'){
@@ -76,13 +104,6 @@ int main(){
 
 				memset(buffer, 0, sizeof buffer); // reiniciando buffer para receber a resposta do servidor
 				
-				int ret1 = read(NewSocket, buffer, sizeof buffer); //le a resposta
-				if(ret1 <= 0){
-					flag = true;
-					break;
-				}
-				printf("Server: %s\n",buffer); //escreve a resposta do servidor
-				memset(buffer, 0, sizeof buffer);
 			}
 			scanf("%c", &c);
 		}
@@ -93,13 +114,8 @@ int main(){
 		send(NewSocket, buffer, strlen(buffer), 0);
 				
 		memset(buffer, 0, sizeof buffer);
-
-		int ret = read(NewSocket, buffer, sizeof buffer);
-		if(ret <= 0){
-			break;
-		}
-		printf("Server: %s\n", buffer);
 	}
+
 
 	close(NewSocket); //fecha o socket
 

@@ -26,7 +26,7 @@ queue<int>QueueClients;
 void SendMessages(int id, char *buffer){
 
 	//Enviando mensagens para todos os clientes, menos o que a enviou
-	for(int i = 0; i < (int) IdClients.size(); i++){
+	for(auto i : IdClients){
 		if(i != id){
 			send(i, buffer, strlen(buffer), 0); 
 		}
@@ -50,7 +50,6 @@ void ThreadMessageClients(int id){
 		
 		//Reenvia a mensagem  para os clientes
 		SendMessages(id, buffer);
-		
 	}		
 }	
 
@@ -134,7 +133,7 @@ int main(){
 	//Vincula o socket a porta 8080
 	SocketAddress.sin_family = AF_INET;
 	SocketAddress.sin_addr.s_addr = INADDR_ANY;
-	SocketAddress.sin_port = htons(3000);
+	SocketAddress.sin_port = htons(8080);
 	//Se falhar, retorna
 	if(bind(NewServer, (struct sockaddr*)&SocketAddress, sizeof SocketAddress) == -1){
 		printf("Bind Failed\n");
