@@ -23,9 +23,9 @@ int main(){
 	}
 
 	ServerAddress.sin_family = AF_INET;
-	ServerAddress.sin_port = htons(1048);
-	ServerAddress.sin_addr.s_addr = inet_addr("159.89.214.31");	
-	//Conectando o cliente a porta 8080
+	ServerAddress.sin_port = htons(3000);
+	//ServerAddress.sin_addr.s_addr = inet_addr("159.89.214.31");	
+	//Conectando o cliente a porta 1048
 	int retConnect = connect(NewSocket, (struct sockaddr*)&ServerAddress, sizeof ServerAddress);
 
 	if(retConnect == -1){
@@ -53,7 +53,7 @@ int main(){
 		printf("%s\n", buffer);
 		if(strcmp(buffer,"Nickname accepted") == 0) break; // Verificando se o Nickname foi aceito
 	}
-	
+		
 	while(true){
 		
 		memset(buffer, 0, sizeof buffer); //reiniciando o servidor

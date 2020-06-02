@@ -10,34 +10,48 @@
 #include <iostream>
 #include <vector>
 #include <set>
+#include <queue>
 using namespace std;
+
 
 //O map Clients armazena a dupla id do cliente e o seu nickname.
 map<int, string>Clients; 
+//O set armazena todos os nicknames
 set<string>Nicknames;
 //O vector IdClients armazena todos os ids dos clientes que estao conectados.
 vector<int>IdClients; 
+//A fila indica a chegada de um novo cliente
+queue<int>QueueClients;
 
-//Parte comentada  nao esta funcionando 
-/*
-void MessageClients(){	
-	char buffer[2050]; //Buffer para escrever e retornar as mensagens ao cliente
+void  ThreadMessageClients(int id){
+	char buffer[2050];	
 	while(true){
-		memset(buffer, 0, sizeof buffer); //Zera o buffer
-		if(!IdClients.empty()){
-			for(int i=0;;i=(i+1)%IdClients.size()){	
-				int ret = 0;
-				ret  = read(IdClients[i], buffer, sizeof buffer); //Recebe a mensagem enviada pelo cliente
-				cout << i << endl;
-				if(ret <= 0) continue;
-				printf("Client: %s\n", buffer); //Escreve a mensagem recebida
-				send(IdClients[i], buffer, strlen(buffer), 0); //A reenvia para o cliente
-			}
-		}
+		//Zera o buffer
+		memset(buffer, 0, sizeof buffer);
+
+		//Recebe a mensagem enviada pelo cliente
+		int ret  = read(id, buffer, sizeof buffer); 
+		
+		if(ret <= 0) break;
+		
+		 //Escreve a mensagem recebida
+		printf("%s: %s\n", Clients[id].c_str(), buffer);
+		
+		//Reenvia a mensagem  para o cliente
+		send(id, buffer, strlen(buffer), 0); 
+	}		
+}	
+
+void MessageClients(){
+	while(true){
+		if(QueueClients.empty()) continue;
+		int NewClient = QueueClients.front();
+		QueueClients.pop();
+		thread TClient(ThreadMessageClients, NewClient);
+		TClient.detach();
 	}
-	
 }
-*/
+
 void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 	char message_welcome[50] = "Welcome to server\nInsert your Nickname: ";
 	char message_accept[50] = "Nickname accepted";
@@ -78,7 +92,6 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 		//Relacionando o id do cliente com o seu nickname
 		Clients[NewClient] = nick;
 		
-		cout << nick << endl;
 		//Guardando o id do cliente no vetor de clientes
 		IdClients.push_back(NewClient);
 		
@@ -87,6 +100,8 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 		
 		//Mandando a mensagem que o nickname foi aceito
 		send(NewClient, message_accept, strlen(message_accept), 0);
+		
+		QueueClients.push(NewClient);	
 	}
 	
 }
@@ -107,7 +122,7 @@ int main(){
 	//Vincula o socket a porta 8080
 	SocketAddress.sin_family = AF_INET;
 	SocketAddress.sin_addr.s_addr = INADDR_ANY;
-	SocketAddress.sin_port = htons(8080);
+	SocketAddress.sin_port = htons(3000);
 	//Se falhar, retorna
 	if(bind(NewServer, (struct sockaddr*)&SocketAddress, sizeof SocketAddress) == -1){
 		printf("Bind Failed\n");
@@ -121,8 +136,8 @@ int main(){
 	}
 	
 	thread ThreadAccept(AcceptClient, NewServer, SocketAddress, addrlen);
-	//thread ThreadMessages(MessageClients);
+	thread ThreadMessages(MessageClients);
 	ThreadAccept.join();
-	//ThreadMessages.join();
+	ThreadMessages.join();
 	return 0;
 }
