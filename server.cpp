@@ -23,12 +23,12 @@ vector<int>IdClients;
 //A fila indica a chegada de um novo cliente
 queue<int>QueueClients;
 
-void SendMessages(int id, char *buffer){
+void SendMessages(int id, string buffer){
 
 	//Enviando mensagens para todos os clientes, menos o que a enviou
 	for(auto i : IdClients){
 		if(i != id){
-			send(i, buffer, strlen(buffer), 0); 
+			send(i, buffer.c_str(), buffer.size(), 0); 
 		}
 	}
 
@@ -48,8 +48,13 @@ void ThreadMessageClients(int id){
 		 //Escreve a mensagem recebida
 		printf("%s: %s\n", Clients[id].c_str(), buffer);
 		
+		//Inserindo o nick do cliente que mandou a mensagem
+		string NewBuffer = Clients[id]+ ": ";
+		
+		for(int i=0; i<strlen(buffer); i++) NewBuffer += buffer[i];
+		
 		//Reenvia a mensagem  para os clientes
-		SendMessages(id, buffer);
+		SendMessages(id, NewBuffer);
 	}		
 }	
 

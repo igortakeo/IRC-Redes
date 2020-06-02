@@ -9,25 +9,6 @@
 #include <iostream>
 using namespace std;
 
-void ReceiveWelcome(int NewSocket){
-	string nick;	
-
-	char buffer[2050];
-	memset(buffer, 0, sizeof buffer);
-	int ret = read(NewSocket, buffer, sizeof buffer); //recebendo a mensagem de boas vindas do servidor para testes
-	printf("%s\n", buffer); // printando a mensagem
-
-	while(true){
-		cin >> nick;
-		send(NewSocket, nick.c_str(), nick.size(), 0); //Enviando para o servido o nickname
-		scanf("%*c");	
-		memset(buffer, 0, sizeof buffer); //zerando o buffer	
-		ret = read(NewSocket, buffer, sizeof buffer); //recebendo a mensagem de boas vindas do servidor para testes
-		printf("%s\n", buffer);
-		if(strcmp(buffer,"Nickname accepted") == 0) break; // Verificando se o Nickname foi aceito
-	}
-}
-
 void ReceiveMessages(int NewSocket){
 
 	char message[2050];
@@ -75,18 +56,31 @@ int main(){
 	char buffer[4096]; //buffer para enviar e receber mensagens
 	bool flag = false;
 	int ret;
+	string nick;	
 	memset(buffer, 0, sizeof buffer); //zerando o buffer
 	
-	thread ReceiveReception(ReceiveWelcome, NewSocket);
-	ReceiveReception.join();
+	
+	memset(buffer, 0, sizeof buffer);
+	ret = read(NewSocket, buffer, sizeof buffer); //recebendo a mensagem de boas vindas do servidor para testes
+	printf("%s\n", buffer); // printando a mensagem
 
+	while(true){
+		cin >> nick;
+		send(NewSocket, nick.c_str(), nick.size(), 0); //Enviando para o servido o nickname
+		scanf("%*c");	
+		memset(buffer, 0, sizeof buffer); //zerando o buffer	
+		ret = read(NewSocket, buffer, sizeof buffer); //recebendo a mensagem de boas vindas do servidor para testes
+		printf("%s\n", buffer);
+		if(strcmp(buffer,"Nickname accepted") == 0) break; // Verificando se o Nickname foi aceito
+	}
+	
 	while(true){
 		
 		thread Receive(ReceiveMessages, NewSocket);
 		Receive.detach();
 
 		memset(buffer, 0, sizeof buffer); //reiniciando o buffer
-
+	
 		char c; //caractere auxiliar
 		int i = 0;
 		scanf("%c", &c);
