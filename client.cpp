@@ -9,6 +9,12 @@
 #include <iostream>
 using namespace std;
 
+
+void OverwriteStdout(){
+	printf("%s", "> ");
+	fflush(stdout);
+}
+
 void ReceiveMessages(int NewSocket){
 
 	char message[2050];
@@ -18,6 +24,7 @@ void ReceiveMessages(int NewSocket){
 		int receive = read(NewSocket, message, sizeof message);
     	if (receive > 0){
       		printf("%s\n", message);
+			OverwriteStdout();
 		}
     	else if (receive == 0){
 			break;
@@ -61,10 +68,9 @@ int main(){
 	
 	char buffer[4096]; //buffer para enviar e receber mensagens
 	int ret;
-	string nick;	
 	memset(buffer, 0, sizeof buffer); //zerando o buffer
 	
-	
+	string nick;
 	memset(buffer, 0, sizeof buffer);
 	ret = read(NewSocket, buffer, sizeof buffer); //recebendo a mensagem de boas vindas do servidor para testes
 	printf("%s\n", buffer); // printando a mensagem
@@ -85,11 +91,11 @@ int main(){
 	while(true){
 		
 		memset(buffer, 0, sizeof buffer); //reiniciando o buffer
-	
+		
 		char c; //caractere auxiliar
 		int i = 0;
 		scanf("%c", &c);
-		
+		OverwriteStdout();
 		while(c != '\n'){
 			buffer[i] = c;	
 			i = (i+1)%2048; //colocando os caracteres na mensagem de forma a limita'-la a 2048 caracteres

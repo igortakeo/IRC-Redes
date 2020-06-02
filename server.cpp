@@ -26,7 +26,7 @@ queue<int>QueueClients;
 void SendMessages(int id, string buffer){
 	//Enviando mensagens para todos os clientes
 	for(auto i : IdClients)
-		send(i, buffer.c_str(), buffer.size(), 0); 		
+		if(i != id) send(i, buffer.c_str(), buffer.size(), 0); 		
 }
 
 void ThreadMessageClients(int id){
