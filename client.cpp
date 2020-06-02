@@ -74,11 +74,12 @@ int main(){
 		if(strcmp(buffer,"Nickname accepted") == 0) break; // Verificando se o Nickname foi aceito
 	}
 	
+	
+	thread Receive(ReceiveMessages, NewSocket);
+	Receive.detach();
+
 	while(true){
 		
-		thread Receive(ReceiveMessages, NewSocket);
-		Receive.detach();
-
 		memset(buffer, 0, sizeof buffer); //reiniciando o buffer
 	
 		char c; //caractere auxiliar
