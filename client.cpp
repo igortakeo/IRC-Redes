@@ -9,20 +9,25 @@
 #include <iostream>
 using namespace std;
 
-
+//Organiza nick dos usuarios
 void OverwriteStdout(){
 	printf("%s", "> ");
 	fflush(stdout);
 }
 
+//Thread para receber mensagens
 void ReceiveMessages(int NewSocket){
 
 	char message[2050];
 	memset(message, 0, sizeof message);
 
 	while(true){
+		//Recebendo mensagem do cliente
 		int receive = read(NewSocket, message, sizeof message);
+
+		//Se a mensagem chegou
     	if (receive > 0){
+			//Escreve
       		printf("%s\n", message);
 			OverwriteStdout();
 		}
