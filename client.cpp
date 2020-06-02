@@ -40,21 +40,26 @@ int main(){
 		printf("Creating Failed\n");
 		return 0;
 	}
+	
+	printf("To connect to server type it: /connect\n");
+	while(true){
+		string input;
+		getline(cin, input);
+		if(input == "/connect")break;
+		printf("Invalid command\n");
+	}
 
 	ServerAddress.sin_family = AF_INET;
 	ServerAddress.sin_port = htons(8080);
 	//ServerAddress.sin_addr.s_addr = inet_addr("159.89.214.31");	
 	//Conectando o cliente a porta 1048
 	int retConnect = connect(NewSocket, (struct sockaddr*)&ServerAddress, sizeof ServerAddress);
-
 	if(retConnect == -1){
-		printf("Connection Failed\n");
+		printf("Connection Failed\n");	
 		return 0;
 	}
 	
-	
 	char buffer[4096]; //buffer para enviar e receber mensagens
-	bool flag = false;
 	int ret;
 	string nick;	
 	memset(buffer, 0, sizeof buffer); //zerando o buffer
@@ -73,8 +78,7 @@ int main(){
 		printf("%s\n", buffer);
 		if(strcmp(buffer,"Nickname accepted") == 0) break; // Verificando se o Nickname foi aceito
 	}
-	
-	
+		
 	thread Receive(ReceiveMessages, NewSocket);
 	Receive.detach();
 
@@ -90,21 +94,14 @@ int main(){
 			buffer[i] = c;	
 			i = (i+1)%2048; //colocando os caracteres na mensagem de forma a limita'-la a 2048 caracteres
 			if(strlen(buffer) == 2048){
-				//se a palavra quit for enviada o programa deve encerrar
-				if(strcmp(buffer, "quit") == 0){
-					flag = true;
-					break;	
-				}
 				send(NewSocket, buffer, strlen(buffer), 0); //enviando a mensagem
-
 				memset(buffer, 0, sizeof buffer); // reiniciando buffer para receber a resposta do servidor
-				
 			}
 			scanf("%c", &c);
 		}
 		
-		if(strcmp(buffer, "quit") == 0)flag = true;
-		if(flag) break;
+		//se a palavra quit for enviada o programa deve encerrar
+		if(strcmp(buffer, "/quit") == 0) break;	
 		
 		send(NewSocket, buffer, strlen(buffer), 0);
 				

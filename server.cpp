@@ -24,17 +24,13 @@ vector<int>IdClients;
 queue<int>QueueClients;
 
 void SendMessages(int id, string buffer){
-
-	//Enviando mensagens para todos os clientes, menos o que a enviou
-	for(auto i : IdClients){
-		if(i != id){
-			send(i, buffer.c_str(), buffer.size(), 0); 
-		}
-	}
-
+	//Enviando mensagens para todos os clientes
+	for(auto i : IdClients)
+		send(i, buffer.c_str(), buffer.size(), 0); 		
 }
 
 void ThreadMessageClients(int id){
+
 	char buffer[2050];	
 	while(true){
 		//Zera o buffer
@@ -144,6 +140,8 @@ int main(){
 		printf("Bind Failed\n");
 		return 0;
 	}
+	
+	printf("Open Server\n");
 
 	//Aguarda a entrada de um cliente
 	if(listen(NewServer, SOMAXCONN) == -1){
