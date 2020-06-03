@@ -65,7 +65,10 @@ void SendMessages(string buffer){
 		}
 		
 		if(buffer == "/disconnect") ClientQuit(i);		
-		if(tries == 0) ClientQuit(i);
+		if(tries == 0){
+			ClientQuit(i);
+			close(i);
+		}
 	}
 }
 
