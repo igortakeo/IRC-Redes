@@ -34,9 +34,12 @@ void client_quit(int id){
 
 	string nick = Clients[id];
 
+	cout << nick << " disconnected from server" << endl; //Informando que o usuario desconectou
+
 	Nicknames.erase(nick); //Apagando nick do set Nicknames.
 
 	Clients.erase(id); //Apagando do map a dupla id/nick
+
 }
 
 
@@ -131,6 +134,9 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 		//Guardando no Conjunto de Nicks
 		Nicknames.insert(nick);
 		
+		//Informando que o usuario conectou-se ao server
+		cout << nick << " joined the server" << endl;
+
 		//Mandando a mensagem que o nickname foi aceito
 		send(NewClient, message_accept, strlen(message_accept), 0);
 		

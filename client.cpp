@@ -12,8 +12,7 @@ using namespace std;
 
 void handler(int sig) {
     signal(SIGINT, handler);
-	cout << "\rTo quit, use: /quit or Ctrl+D" << endl;
-	printf("\t\r");
+	cout << "\t\rTo quit, use: /quit or Ctrl+D" << endl;
     fflush(stdout);
 }
 
@@ -39,6 +38,7 @@ int main(){
 
 	signal(SIGINT, handler);
 
+
 	int NewSocket;
 	struct sockaddr_in ServerAddress;
 
@@ -51,11 +51,16 @@ int main(){
 		return 0;
 	}
 	
-	printf("To connect to server type it: /connect\n");
+	printf("To connect to server, type it: /connect\n");
+	printf("To disconnect from server or close the app, type it: /quit or use Ctrl+D\n");
 	while(true){
 		string input;
 		getline(cin, input);
-		if(input == "/connect")break;
+		if(cin.eof()){
+			cout << "Bye!" << endl;
+			return 0;
+		}
+		if(input == "/connect") break;
 		printf("Invalid command\n");
 	}
 
@@ -81,6 +86,11 @@ int main(){
 
 	while(true){
 		cin >> nick;
+		if(cin.eof()){
+			cout << "Bye!" << endl;
+			close(NewSocket);
+			return 0;
+		}
 		send(NewSocket, nick.c_str(), nick.size(), 0); //Enviando para o servido o nickname
 		scanf("%*c");	
 		memset(buffer, 0, sizeof buffer); //zerando o buffer	
@@ -98,8 +108,13 @@ int main(){
 	
 		char c; //caractere auxiliar
 		int i = 0;
-		scanf("%c", &c);
-		
+		//Para sair com Ctrl+D
+		if(scanf("%c", &c) == EOF){
+			memset(buffer, 0, sizeof buffer);
+			strcpy(buffer, "/quit");
+			c = '\n';
+			cout << "Bye!" << endl;
+		}
 		while(c != '\n'){
 			buffer[i] = c;	
 			i = (i+1)%2048; //colocando os caracteres na mensagem de forma a limita'-la a 2048 caracteres
@@ -107,7 +122,13 @@ int main(){
 				send(NewSocket, buffer, strlen(buffer), 0); //enviando a mensagem
 				memset(buffer, 0, sizeof buffer); // reiniciando buffer para receber a resposta do servidor
 			}
-			scanf("%c", &c);
+			//Para sair com Ctrl+D
+			if(scanf("%c", &c) == EOF){
+				memset(buffer, 0, sizeof buffer);
+				strcpy(buffer, "/quit");
+				cout << "Bye!" << endl;
+				break;
+			}
 		}
 		
 		//se o comando /quit for enviado, o programa deve encerrar
