@@ -124,11 +124,13 @@ int main(){
 		ret = read(NewSocket, buffer, sizeof buffer); 
 		
 		//Printando a resposta do servidor
-		printf("%s\n", buffer);
+		printf("%s", buffer);
 		
 		//Verificando se o nickname foi aceito
-		if(strcmp(buffer,"Nickname accepted") == 0) break; 
-	
+		if(strcmp(buffer,"Nickname accepted") == 0){
+			printf("\n");
+			break; 
+		}
 	}
 		
 	thread Receive(ReceiveMessages, NewSocket);

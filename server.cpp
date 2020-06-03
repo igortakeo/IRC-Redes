@@ -141,8 +141,9 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 		send(NewClient, message_welcome, strlen(message_welcome), 0);
 			
 		string nick;
-		
+			
 		while(true){
+			
 			//Lendo nickname do cliente
 			int ret = read(NewClient, buffer , sizeof buffer);
 			
@@ -154,6 +155,12 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 			
 			//Enviando a mensagem de erro para o cliente
 			send(NewClient, message_error_nickame, strlen(message_error_nickame), 0);
+			
+			//Zera o buffer
+			memset(buffer, 0, sizeof buffer);
+			
+			//Limpando o nick
+			nick.clear();
 		}	
 	
 		//Relacionando o id do cliente com o seu nickname
