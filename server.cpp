@@ -45,8 +45,21 @@ void client_quit(int id){
 
 void SendMessages(string buffer){
 	//Enviando mensagens para todos os clientes
-	for(auto i : IdClients)
-		send(i, buffer.c_str(), buffer.size(), 0); 		
+	int tries = 5;
+	for(auto i : IdClients){
+		while(tries){
+			if(send(i, buffer.c_str(), buffer.size(), 0) == -1){
+				tries--;
+			}  	
+			else{
+				break;
+			}
+		}
+		if(tries == 0){
+			client_quit(i);
+			close(i);
+		}
+	}
 }
 
 void ThreadMessageClients(int id){
