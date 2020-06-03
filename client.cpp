@@ -37,7 +37,7 @@ void ReceiveMessages(int NewSocket){
 int main(){
 
 	signal(SIGINT, handler);
-
+	bool pong = false;
 
 	int NewSocket;
 	struct sockaddr_in ServerAddress;
@@ -135,7 +135,7 @@ int main(){
 		if(strcmp(buffer, "/quit") == 0){
 			send(NewSocket, buffer, strlen(buffer), 0);
 			break;
-		}	
+		}
 		
 		send(NewSocket, buffer, strlen(buffer), 0);
 				

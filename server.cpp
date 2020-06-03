@@ -43,7 +43,7 @@ void client_quit(int id){
 }
 
 
-void SendMessages(int id, string buffer){
+void SendMessages(string buffer){
 	//Enviando mensagens para todos os clientes
 	for(auto i : IdClients)
 		send(i, buffer.c_str(), buffer.size(), 0); 		
@@ -52,7 +52,9 @@ void SendMessages(int id, string buffer){
 void ThreadMessageClients(int id){
 
 	char buffer[2050];	
+	
 	while(true){
+
 		//Zera o buffer
 		memset(buffer, 0, sizeof buffer);
 
@@ -60,6 +62,12 @@ void ThreadMessageClients(int id){
 		int ret  = read(id, buffer, sizeof buffer); 
 		
 		if(ret <= 0) break;
+		if(strcmp(buffer, "/ping") == 0){
+			string pong = "pong";
+			printf("Sending pong to %s\n", Clients[id].c_str());
+			send(id, pong.c_str(), pong.size(), 0); 	
+			continue;
+		}
 		if(strcmp(buffer, "/quit") == 0){
 			client_quit(id);
 			break;
@@ -74,7 +82,7 @@ void ThreadMessageClients(int id){
 		for(int i=0; i<strlen(buffer); i++) NewBuffer += buffer[i];
 		
 		//Reenvia a mensagem  para os clientes
-		SendMessages(id, NewBuffer);
+		SendMessages(NewBuffer);
 	}		
 }	
 
