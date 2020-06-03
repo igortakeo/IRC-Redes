@@ -7,7 +7,15 @@
 #include <string.h> 
 #include <thread>
 #include <iostream>
+#include <csignal>
 using namespace std;
+
+void handler(int sig) {
+    signal(SIGINT, handler);
+	cout << "\rTo quit, use: /quit or Ctrl+D" << endl;
+	printf("\t\r");
+    fflush(stdout);
+}
 
 void ReceiveMessages(int NewSocket){
 
@@ -28,6 +36,8 @@ void ReceiveMessages(int NewSocket){
 
 
 int main(){
+
+	signal(SIGINT, handler);
 
 	int NewSocket;
 	struct sockaddr_in ServerAddress;
