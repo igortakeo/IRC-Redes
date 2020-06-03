@@ -23,10 +23,27 @@ vector<int>IdClients;
 //A fila indica a chegada de um novo cliente
 queue<int>QueueClients;
 
+void client_quit(int id){
+
+	int size = IdClients.size();
+	for(int i = 0; i < size; i++){
+		if(id == IdClients[i]){
+			IdClients.erase(IdClients.begin() + i); //Apagando ID do vector.
+		}
+	}
+
+	string nick = Clients[id];
+
+	Nicknames.erase(nick); //Apagando nick do set Nicknames.
+
+	Clients.erase(id); //Apagando do map a dupla id/nick
+}
+
+
 void SendMessages(int id, string buffer){
 	//Enviando mensagens para todos os clientes
 	for(auto i : IdClients)
-		if(i != id) send(i, buffer.c_str(), buffer.size(), 0); 		
+		send(i, buffer.c_str(), buffer.size(), 0); 		
 }
 
 void ThreadMessageClients(int id){
@@ -40,6 +57,10 @@ void ThreadMessageClients(int id){
 		int ret  = read(id, buffer, sizeof buffer); 
 		
 		if(ret <= 0) break;
+		if(strcmp(buffer, "/quit") == 0){
+			client_quit(id);
+			break;
+		}
 		
 		 //Escreve a mensagem recebida
 		printf("%s: %s\n", Clients[id].c_str(), buffer);
@@ -117,6 +138,9 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 	}
 	
 }
+
+
+
 
 int main(){
 
