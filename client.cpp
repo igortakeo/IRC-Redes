@@ -79,9 +79,14 @@ int main(){
 	}
 
 	ServerAddress.sin_family = AF_INET;
+	
+	//Para conexao localhost
 	ServerAddress.sin_port = htons(8080);
+
+	//Para conectar atraves da rede 	
+	//ServerAddress.sin_port = htons(1048);
 	//ServerAddress.sin_addr.s_addr = inet_addr("159.89.214.31");	
-	//Conectando o cliente a porta 1048
+	
 	int retConnect = connect(NewSocket, (struct sockaddr*)&ServerAddress, sizeof ServerAddress);
 	if(retConnect < 0){
 		printf("Connection Failed\n");	

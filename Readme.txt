@@ -34,3 +34,16 @@ Informações importantes:
 sendo usado, o programa não vai aceitar e pedirá para digitar um nickname válido.
 3->Para sair do programa cliente basta digitar "/quit" ou apertar CTRL + D.
 4->Após sair do programa cliente seu nickname ficará disponivel para outras pessoas.
+5->Para se conectar através da rede foi usado um servidor de um site chamado serveo.net,
+o site disponibiliza um comando que será executado no terminal, todas as requisições que o 
+cliente mandar para o ip do site ele irá converter para sua rede na porta especificada.
+O comando: 'ssh -R 1048:localhost:8080 serveo.net'. 
+(Todas as requisições enviadas no ip do site na porta 1048 será transferida para sua rede local na porta 8080).
+Portanto para o funcionamento correto da conexão, a máquina que executará o server.cpp terá que executar o comando
+mencionado anteriormente e posteriormente rodar o servidor. Obs: Para a conexão através da rede terá que descomentar
+as linhas 87 e 88 e comentar a 84 do código do client.cpp. 
+  	
+	
+
+
+
