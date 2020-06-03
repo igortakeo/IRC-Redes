@@ -11,6 +11,7 @@
 #include <vector>
 #include <set>
 #include <queue>
+#include <csignal>
 using namespace std;
 
 
@@ -22,43 +23,49 @@ set<string>Nicknames;
 vector<int>IdClients; 
 //A fila indica a chegada de um novo cliente
 queue<int>QueueClients;
+int NewServer;
 
-void client_quit(int id){
+void handler(int sig) {
+    signal(SIGINT, handler);
+	cout << "\t\rTo close server, use: Ctrl+D" << endl;
+    fflush(stdout);
+}
+
+void ClientQuit(int id){
 
 	int size = IdClients.size();
 	for(int i = 0; i < size; i++){
 		if(id == IdClients[i]){
-			IdClients.erase(IdClients.begin() + i); //Apagando ID do vector.
+			//Apagando ID do vector.
+			IdClients.erase(IdClients.begin() + i); 
 		}
 	}
 
 	string nick = Clients[id];
-
-	cout << nick << " disconnected from server" << endl; //Informando que o usuario desconectou
-
-	Nicknames.erase(nick); //Apagando nick do set Nicknames.
-
-	Clients.erase(id); //Apagando do map a dupla id/nick
+	
+	//Informando que o usuario desconectou
+	cout << nick << " disconnected from server" << endl; 
+	
+	//Apagando nick do set Nicknames.
+	Nicknames.erase(nick);
+	
+	//Apagando do map a dupla id/nick
+	Clients.erase(id);
 
 }
 
-
+//Enviando mensagens para todos os clientes
 void SendMessages(string buffer){
-	//Enviando mensagens para todos os clientes
-	int tries = 5;
-	for(auto i : IdClients){
+	vector<int>AuxIdClients = IdClients;
+	for(auto i : AuxIdClients){
+		int tries = 5;
 		while(tries){
-			if(send(i, buffer.c_str(), buffer.size(), 0) == -1){
-				tries--;
-			}  	
-			else{
-				break;
-			}
+			if(send(i, buffer.c_str(), buffer.size(), 0) == -1) tries--;
+			else break;
 		}
-		if(tries == 0){
-			client_quit(i);
-			close(i);
-		}
+		
+		if(buffer == "/disconnect") ClientQuit(i);		
+		if(tries == 0) ClientQuit(i);
 	}
 }
 
@@ -67,7 +74,6 @@ void ThreadMessageClients(int id){
 	char buffer[2050];	
 	
 	while(true){
-
 		//Zera o buffer
 		memset(buffer, 0, sizeof buffer);
 
@@ -82,7 +88,7 @@ void ThreadMessageClients(int id){
 			continue;
 		}
 		if(strcmp(buffer, "/quit") == 0){
-			client_quit(id);
+			ClientQuit(id);
 			break;
 		}
 		
@@ -115,6 +121,7 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 	char message_error_nickame[50] = "Nickname already exist\nInsert your Nickname: ";
 	char buffer[2050];
 	while(true){
+		
 		//Zera o buffer
 		memset(buffer, 0, sizeof buffer);
 		
@@ -127,7 +134,7 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 			continue;
 		}
 		
-		//Envia mensagem de boas vindas ao cliente
+		//Envia a mensagem de boas vindas ao cliente
 		send(NewClient, message_welcome, strlen(message_welcome), 0);
 			
 		string nick;
@@ -152,7 +159,7 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 		//Guardando o id do cliente no vetor de clientes
 		IdClients.push_back(NewClient);
 		
-		//Guardando no Conjunto de Nicks
+		//Guardando no conjunto de nicks
 		Nicknames.insert(nick);
 		
 		//Informando que o usuario conectou-se ao server
@@ -161,17 +168,43 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 		//Mandando a mensagem que o nickname foi aceito
 		send(NewClient, message_accept, strlen(message_accept), 0);
 		
+		//Inserindo o cliente na fila
 		QueueClients.push(NewClient);	
 	}
 	
 }
 
-
+void MessagesStdin(){
+	string s;
+	while(true){
+		
+		//Verificando se existe alguma mensagem do servidor
+		getline(cin, s);
+		
+		//Verificando se foi dado o sinal de EOF(Ctrl + D)
+		if(cin.eof()){
+			//Mensagem para fechar o servidor
+			printf("Closing Server...\n");
+			
+			//Enviando a mensagem para os clientes disconectarem
+			SendMessages("/disconnect");
+			
+			//Fechando o servidor
+			close(NewServer);
+			
+			break;
+		}
+		else printf("Invalid Comand\n");	
+	}
+	
+	exit(0);
+}
 
 
 int main(){
-
-	int NewServer, NewSocket;
+	
+	signal(SIGINT, handler);
+	
 	struct sockaddr_in SocketAddress;
 	int addrlen = sizeof SocketAddress;
 
@@ -182,17 +215,20 @@ int main(){
 		printf("Creating Failed\n");
 		return 0;
 	}
+	
 	//Vincula o socket a porta 8080
 	SocketAddress.sin_family = AF_INET;
 	SocketAddress.sin_addr.s_addr = INADDR_ANY;
 	SocketAddress.sin_port = htons(8080);
+	
 	//Se falhar, retorna
 	if(bind(NewServer, (struct sockaddr*)&SocketAddress, sizeof SocketAddress) == -1){
 		printf("Bind Failed\n");
 		return 0;
 	}
 	
-	printf("Open Server\n");
+	//Mensagem de sucessdo na abertura do servidor
+	printf("Open Server (To close server, use: Ctrl + D)\n");
 
 	//Aguarda a entrada de um cliente
 	if(listen(NewServer, SOMAXCONN) == -1){
@@ -202,7 +238,10 @@ int main(){
 	
 	thread ThreadAccept(AcceptClient, NewServer, SocketAddress, addrlen);
 	thread ThreadMessages(MessageClients);
+	thread ThreadMessagesStdin(MessagesStdin);
 	ThreadAccept.join();
 	ThreadMessages.join();
+	ThreadMessagesStdin.join();
+	
 	return 0;
 }

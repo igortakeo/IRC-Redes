@@ -22,13 +22,27 @@ void ReceiveMessages(int NewSocket){
 	memset(message, 0, sizeof message);
 
 	while(true){
+		//Recebendo a mensagem do servidor
 		int receive = read(NewSocket, message, sizeof message);
+    	
+    	//Verificando a mensagen de fechamento do servidor
+    	if(strcmp(message, "/disconnect") == 0){
+			printf("Server Closed\n");
+			printf("Bye!\n");		
+			close(NewSocket);
+			exit(0);
+		}
+		
+    	//Printando a mensagem recebida
     	if (receive > 0){
       		printf("%s\n", message);
 		}
+		
     	else if (receive == 0){
 			break;
-   	 	} 
+   	 	}
+   	 	
+   	 	//Limpando o buffer 
 		memset(message, 0, sizeof(message));
   	}
 }
@@ -74,29 +88,47 @@ int main(){
 		return 0;
 	}
 	
-	char buffer[4096]; //buffer para enviar e receber mensagens
+	//Buffer para enviar mensagens
+	char buffer[4096]; 
 	int ret;
 	string nick;	
-	memset(buffer, 0, sizeof buffer); //zerando o buffer
 	
-	
+	//Zerando o buffer
 	memset(buffer, 0, sizeof buffer);
-	ret = read(NewSocket, buffer, sizeof buffer); //recebendo a mensagem de boas vindas do servidor para testes
-	printf("%s\n", buffer); // printando a mensagem
-
+		
+	//Recebendo a mensagem de boas vindas do servidor para testes
+	ret = read(NewSocket, buffer, sizeof buffer); 
+	
+	//Printando a mensagem
+	printf("%s", buffer); 
+	
 	while(true){
-		cin >> nick;
+		
+		//Recebendo o nickname do cliente
+		getline(cin, nick);
+		
+		//Verificando se eh um sinal de EOF (Ctrl + D)
 		if(cin.eof()){
 			cout << "Bye!" << endl;
 			close(NewSocket);
 			return 0;
 		}
-		send(NewSocket, nick.c_str(), nick.size(), 0); //Enviando para o servido o nickname
-		scanf("%*c");	
-		memset(buffer, 0, sizeof buffer); //zerando o buffer	
-		ret = read(NewSocket, buffer, sizeof buffer); //recebendo a mensagem de boas vindas do servidor para testes
+		
+		//Enviando para o servidor o nickname
+		send(NewSocket, nick.c_str(), nick.size(), 0); 
+		
+		//Limpando o buffer
+		memset(buffer, 0, sizeof buffer);
+		
+		//Recebendo a mensagem de validacao do nickname
+		ret = read(NewSocket, buffer, sizeof buffer); 
+		
+		//Printando a resposta do servidor
 		printf("%s\n", buffer);
-		if(strcmp(buffer,"Nickname accepted") == 0) break; // Verificando se o Nickname foi aceito
+		
+		//Verificando se o nickname foi aceito
+		if(strcmp(buffer,"Nickname accepted") == 0) break; 
+	
 	}
 		
 	thread Receive(ReceiveMessages, NewSocket);
@@ -104,10 +136,13 @@ int main(){
 
 	while(true){
 		
-		memset(buffer, 0, sizeof buffer); //reiniciando o buffer
-	
-		char c; //caractere auxiliar
+		//Limpando o buffer
+		memset(buffer, 0, sizeof buffer);
+		
+		//Caractere auxiliar
+		char c;
 		int i = 0;
+		
 		//Para sair com Ctrl+D
 		if(scanf("%c", &c) == EOF){
 			memset(buffer, 0, sizeof buffer);
@@ -115,12 +150,19 @@ int main(){
 			c = '\n';
 			cout << "Bye!" << endl;
 		}
+		
 		while(c != '\n'){
+			
 			buffer[i] = c;	
-			i = (i+1)%2048; //colocando os caracteres na mensagem de forma a limita'-la a 2048 caracteres
+			
+			//Colocando os caracteres na mensagem de forma a limita-la a 2048 caracteres
+			i = (i+1)%2048;
 			if(strlen(buffer) == 2048){
-				send(NewSocket, buffer, strlen(buffer), 0); //enviando a mensagem
-				memset(buffer, 0, sizeof buffer); // reiniciando buffer para receber a resposta do servidor
+				//Enviando a mensagem
+				send(NewSocket, buffer, strlen(buffer), 0);
+				
+				//Limpando o buffer
+				memset(buffer, 0, sizeof buffer); 
 			}
 			//Para sair com Ctrl+D
 			if(scanf("%c", &c) == EOF){
@@ -131,7 +173,7 @@ int main(){
 			}
 		}
 		
-		//se o comando /quit for enviado, o programa deve encerrar
+		//Se o comando "/quit" for enviado, o programa deve encerrar
 		if(strcmp(buffer, "/quit") == 0){
 			send(NewSocket, buffer, strlen(buffer), 0);
 			break;
@@ -142,8 +184,8 @@ int main(){
 		memset(buffer, 0, sizeof buffer);
 	}
 
-
-	close(NewSocket); //fecha o socket
+	//Fecha o socket
+	close(NewSocket); 
 
 	return 0;
 }
