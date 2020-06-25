@@ -52,10 +52,14 @@ int main(){
 
 	signal(SIGINT, handler);
 	bool pong = false;
-
 	int NewSocket;
 	struct sockaddr_in ServerAddress;
-
+	
+	//Buffer para enviar mensagens
+	char buffer[4096]; 
+	int ret;
+	string nick, message;	
+		
 	//Criando um socket
 	NewSocket = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -80,23 +84,18 @@ int main(){
 
 	ServerAddress.sin_family = AF_INET;
 	
-	//Para conexao localhost
+	//Para conectar localhost
 	ServerAddress.sin_port = htons(8080);
-
+		
 	//Para conectar atraves da rede 	
-	//ServerAddress.sin_port = htons(1048);
-	//ServerAddress.sin_addr.s_addr = inet_addr("159.89.214.31");	
+	//ServerAddress.sin_port = htons(1050);
+	ServerAddress.sin_addr.s_addr = inet_addr("192.168.0.110");	
 	
 	int retConnect = connect(NewSocket, (struct sockaddr*)&ServerAddress, sizeof ServerAddress);
 	if(retConnect < 0){
 		printf("Connection Failed\n");	
 		return 0;
 	}
-	
-	//Buffer para enviar mensagens
-	char buffer[4096]; 
-	int ret;
-	string nick;	
 	
 	//Zerando o buffer
 	memset(buffer, 0, sizeof buffer);
@@ -134,9 +133,50 @@ int main(){
 		//Verificando se o nickname foi aceito
 		if(strcmp(buffer,"Nickname accepted") == 0){
 			printf("\n");
+			string joinServer = nick + " joined the server\n";
+			send(NewSocket, joinServer.c_str(), joinServer.size(), 0);
 			break; 
 		}
 	}
+	
+	//Zera o buffer
+	memset(buffer, 0, sizeof buffer);
+	
+	//Lendo a mensagem pra escolha do canal
+	ret = read(NewSocket, buffer, sizeof buffer);
+	
+	//Printando a mensagem 
+	printf("%s", buffer);
+	
+	
+	
+	while(true){
+		
+		//Zera o buffer.
+		memset(buffer, 0, sizeof buffer);
+		
+		//Recebendo a mensagem do cliente.	
+		getline(cin, message);
+		
+		//Mandando a mensagem para o servidor.
+		send(NewSocket, message.c_str(), message.size(), 0);
+		
+		//Lendo a mensagem de validacao do servidor.	
+		read(NewSocket, buffer, sizeof buffer);
+		
+		//Printando a mensagem.
+		printf("%s", buffer);
+		
+		string cutMessage;
+		
+		//Cortando a mensagem recebida pelo servidor.
+		cutMessage.append(buffer, buffer+7);
+		
+		//Verificando se foi possivel entrar no canal.
+		if(cutMessage == "Welcome") break;
+
+	}
+	
 		
 	thread Receive(ReceiveMessages, NewSocket);
 	Receive.detach();
