@@ -132,7 +132,7 @@ int main(){
 		
 		//Verificando se o nickname foi aceito
 		if(strcmp(buffer,"Nickname accepted") == 0){
-			printf("\n");
+			printf("\n\n");
 			string joinServer = nick + " joined the server\n";
 			send(NewSocket, joinServer.c_str(), joinServer.size(), 0);
 			break; 

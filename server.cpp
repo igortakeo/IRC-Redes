@@ -13,7 +13,33 @@
 #include <queue>
 #include <csignal>
 #include <string>
+#include <algorithm>
 using namespace std;
+
+//Declaracoes das funcoes.
+void handler(int sig);
+void ClientQuit(int id);
+bool checkChannel(int id);
+void SendMessages(string buffer, int channel);
+void ThreadMessageClients(int id);
+void MessageClients();
+void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen);
+void MessagesStdin();
+
+//O map Clients armazena a dupla id do cliente e o seu nickname.
+map<int, string>Clients; 
+
+//O map Clients armazen a dupla nickname e id do cliente.
+map<string, int>ClientsReverse;
+
+//O set armazena todos os nicknames
+set<string>Nicknames;
+
+//O vector IdClients armazena todos os ids dos clientes que estao conectados.
+vector<int>IdClients; 
+
+//A fila indica a chegada de um novo cliente.
+queue<int>QueueClients;
 
 
 class Channel{
@@ -34,42 +60,49 @@ class Channel{
 	
 	//O map guarda a relação de id do usuário com o seu respectivo ip.
 	map<int, string>UsersIp;
+		
+	string whois(int id){
+		string sendIP = Clients[id]+" user ip: "+UsersIp[id];
+		return sendIP;
+	}
 	
-	//O map Clients armazena o id do cliente e seu respectivo nickname. (Armazenar globalmente, lembrar de excluir)
-	map<int, string>Clients; 
+	void kick(int id){
+		if(id == idAdmin){
+			string errorAdmin = "Error, command not allowed !!";
+			send(id, errorAdmin.c_str(), errorAdmin.size(), 0);		
+		}
+		else{ 
+			string messageDisconnect = "/disconnect";
+			send(id, messageDisconnect.c_str(), messageDisconnect.size(), 0);
+			ClientQuit(id);
+		}	
+	}
 	
-	void whois(int idClient){
-		//Tem que retornar apenas para o Administrador do Canal
-		printf("%s user ip: %s\n", Clients[idClient].c_str(), UsersIp[idClient].c_str()); // mandar para o administrador do canal
-		 
+	void mute(int id){
+		
+		
+		
+	}
+	
+	void unmute(int id){
+		
+		
+		
 	}
 			
 };
 
-//O map Clients armazena a dupla id do cliente e o seu nickname.
-// Esta parte será armazenada na classe channel, lembrar de apagar****
-map<int, string>Clients; 
-
-//O set armazena todos os nicknames
-set<string>Nicknames;
-
-//O vector IdClients armazena todos os ids dos clientes que estao conectados.
-vector<int>IdClients; 
-
-//A fila indica a chegada de um novo cliente.
-queue<int>QueueClients;
 
 //Conjunto de canais existentes.
 set<int>SetChannels;
 
 //O canal em que o id está conectado.
-map<int, Channel>ConnectedChannel;
+map<int, int>ConnectedChannel;
 
 //Guarda a dupla idcanal e o canal.
 map<int, Channel>IdChannel;
 
 int NewServer;
-
 
 
 void handler(int sig) {
@@ -92,19 +125,34 @@ void ClientQuit(int id){
 		if(id == IdClients[i]){
 			//Apagando ID do vector.
 			IdClients.erase(IdClients.begin() + i); 
+			break;
 		}
 	}
 
 	string nick = Clients[id];
 	
-	//Informando que o usuario desconectou
+	//Informando que o usuario desconectou.
 	cout << nick << " disconnected from server" << endl; 
 	
 	//Apagando nick do set Nicknames.
 	Nicknames.erase(nick);
 	
-	//Apagando do map a dupla id/nick
+	//Apagando do map a dupla id/nick.
 	Clients.erase(id);
+	
+	//Apagando do map a dupla nick/id.
+	ClientsReverse.erase(nick);
+	
+	//Apagando do map de ips a dupla id/ip.
+	IdChannel[ConnectedChannel[id]].UsersIp.erase(id);
+	
+	//Apagando o ID do vector do canal.
+	for(int i=0; i<IdChannel[ConnectedChannel[id]].UsersChannel.size(); i++){
+		if(id == IdChannel[ConnectedChannel[id]].UsersChannel[i]){
+			IdChannel[ConnectedChannel[id]].UsersChannel.erase(IdChannel[ConnectedChannel[id]].UsersChannel.begin()+i);
+			break;
+		}
+	}
 
 }
 
@@ -144,27 +192,94 @@ void ThreadMessageClients(int id){
 		int ret  = read(id, buffer, sizeof buffer); 
 		
 		if(ret <= 0) break;
-		if(strcmp(buffer, "/ping") == 0){
+		else if(strcmp(buffer, "/ping") == 0){
 			string pong = "pong";
 			printf("Sending pong to %s\n", Clients[id].c_str());
 			send(id, pong.c_str(), pong.size(), 0); 	
 			continue;
 		}
-		if(strcmp(buffer, "/quit") == 0){
+		else if(strcmp(buffer, "/quit") == 0){
 			ClientQuit(id);
 			break;
 		}
 		
+		//Verificando os comandos do admin.
+		else if(buffer[0] == '/'){
+	
+			string message = "", user = ""; 
+			string messageError = "You no are admin !";
+			string messageErrorUserExist = "User not exist";
+			string messageErrorUserChannel = "User not belongs in this channel";
+			
+			int i = 0;
+			
+			for(i=0; i<strlen(buffer); i++){
+				if(buffer[i] == ' ') break;
+				else message += buffer[i];
+			}
+			
+			for(i=i+1; i<strlen(buffer); i++) user+=buffer[i];
+				
+			if(message == "/whois"){
+				if(id != IdChannel[ConnectedChannel[id]].idAdmin){
+					send(id, messageError.c_str(), messageError.size(), 0);
+				}	
+				else{
+					if(Nicknames.count(user) != 0){
+						int idUser = ClientsReverse[user];
+						if(count(IdChannel[ConnectedChannel[id]].UsersChannel.begin(),IdChannel[ConnectedChannel[id]].UsersChannel.end(),idUser) == 1){
+							string sendIP = IdChannel[ConnectedChannel[id]].whois(idUser);
+							send(id, sendIP.c_str(), sendIP.size(), 0);
+						}
+						else send(id, messageErrorUserChannel.c_str(), messageErrorUserChannel.size(), 0);
+					}
+					else send(id, messageErrorUserExist.c_str(), messageErrorUserExist.size(), 0); 
+					
+				}	
+				continue;
+			}
+			else if(message == "/kick"){
+				if(id != IdChannel[ConnectedChannel[id]].idAdmin){
+					send(id, messageError.c_str(), messageError.size(), 0);
+				}
+				else{
+					if(Nicknames.count(user) != 0){	
+						int idUser = ClientsReverse[user];
+						if(count(IdChannel[ConnectedChannel[id]].UsersChannel.begin(),IdChannel[ConnectedChannel[id]].UsersChannel.end(),idUser) == 1){
+							IdChannel[ConnectedChannel[id]].kick(idUser);
+						}
+						else send(id, messageErrorUserChannel.c_str(), messageErrorUserChannel.size(), 0);
+					}
+					else send(id, messageErrorUserExist.c_str(), messageErrorUserExist.size(), 0); 
+				}
+				continue;	
+			}
+			else if(message == "/mute"){
+				if(id != IdChannel[ConnectedChannel[id]].idAdmin){
+					send(id, messageError.c_str(), messageError.size(), 0);
+				}
+				continue;				
+			}
+			else if(message == "/unmute"){
+				if(id != IdChannel[ConnectedChannel[id]].idAdmin){
+					send(id, messageError.c_str(), messageError.size(), 0);
+				}
+				continue;				
+			}	
+			
+			
+		}
+		
 		 //Escreve a mensagem recebida
-		printf("%s-#%d: %s\n", Clients[id].c_str(), ConnectedChannel[id].idChannel, buffer);
+		printf("%s-#%d: %s\n", Clients[id].c_str(), IdChannel[ConnectedChannel[id]].idChannel, buffer);
 		
 		//Inserindo o nick do cliente que mandou a mensagem
-		string NewBuffer = Clients[id]+"-#"+to_string(ConnectedChannel[id].idChannel)+": ";
+		string NewBuffer = Clients[id]+"-#"+to_string(IdChannel[ConnectedChannel[id]].idChannel)+": ";
 		
 		for(int i=0; i<strlen(buffer); i++) NewBuffer += buffer[i];
 		
 		//Reenvia a mensagem  para os clientes
-		SendMessages(NewBuffer, ConnectedChannel[id].idChannel);
+		SendMessages(NewBuffer, IdChannel[ConnectedChannel[id]].idChannel);
 	}		
 }	
 
@@ -283,7 +398,7 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 				}	
 			}
 			
-			else if(message.size() >= 7 and message.substr(0,5) == "/join" and message[6] == '#'){
+			else if(message.size() > 7 and message.substr(0,5) == "/join" and message[6] == '#' and message[5] == ' '){
 				char ip[INET_ADDRSTRLEN]; 
 				Channel c;
 				rest = message.substr(7);
@@ -314,7 +429,7 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 					c.UsersChannel.push_back(NewClient);
 					c.number++;
 					c.UsersIp[NewClient] = ip;
-					ConnectedChannel[NewClient] = c;
+					ConnectedChannel[NewClient] = channel;
 					IdChannel[channel] = c;
 				}
 				else{	
@@ -323,7 +438,7 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 					c.number = 1;
 					c.UsersChannel.push_back(NewClient);
 					c.UsersIp[NewClient] = ip;		
-					ConnectedChannel[NewClient] = c;
+					ConnectedChannel[NewClient] = channel;
 					SetChannels.insert(channel);
 					IdChannel[channel] = c;
 					flagAdmin = true;
@@ -349,19 +464,22 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 		}
 		
 	
-		//Relacionando o id do cliente com o seu nickname
+		//Relacionando o id do cliente com o seu nickname.
 		Clients[NewClient] = nick;
 		
-		//Guardando o id do cliente no vetor de clientes
+		//Relacionando o nick do cliente com o seu id.
+		ClientsReverse[nick] = NewClient;
+		
+		//Guardando o id do cliente no vetor de clientes.
 		IdClients.push_back(NewClient);
 		
-		//Guardando no conjunto de nicks
+		//Guardando no conjunto de nicks.
 		Nicknames.insert(nick);
 		
-		//Informando que o usuario conectou-se ao server
+		//Informando que o usuario conectou-se ao server.
 		cout << nick << " joined the channel #" << channel << endl;
 
-		//Inserindo o cliente na fila
+		//Inserindo o cliente na fila.
 		QueueClients.push(NewClient);	
 	}
 	
