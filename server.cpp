@@ -150,10 +150,10 @@ void ThreadMessageClients(int id){
 		}
 		
 		 //Escreve a mensagem recebida
-		printf("%s: %s\n", Clients[id].c_str(), buffer);
+		printf("%s-#%d: %s\n", Clients[id].c_str(), ConnectedChannel[id].idChannel, buffer);
 		
 		//Inserindo o nick do cliente que mandou a mensagem
-		string NewBuffer = Clients[id]+ ": ";
+		string NewBuffer = Clients[id]+"-#"+to_string(ConnectedChannel[id].idChannel)+": ";
 		
 		for(int i=0; i<strlen(buffer); i++) NewBuffer += buffer[i];
 		
@@ -240,10 +240,15 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 		//Envia a mensagem para a escolha de um canal.
 		send(NewClient, message_joinchannel, strlen(message_joinchannel), 0);
 		
-		string message, type, rest;
+		string message, rest;
 		int channel;
+		bool flagAdmin = false;
 		
 		while(true){
+			
+			//Limpando as strings.	
+			message.clear();
+			rest.clear();
 				
 			//Zera o buffer.
 			memset(buffer, 0, sizeof buffer);
@@ -253,7 +258,6 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 			
 			//Transformando para std::string.
 			message.append(buffer, buffer+strlen(buffer));
-			type = message.substr(0,5);
 		
 			//Verificando se o cliente pediu para ver a lista de canais.
 			if(message == "/list"){
@@ -272,14 +276,30 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 					send(NewClient, sendList.c_str(), sendList.size(), 0);
 				}	
 			}
-			else if(type == "/join" and message[6] == '#'){
+			
+			else if(message.size() >= 7 and message.substr(0,5) == "/join" and message[6] == '#'){
 				char ip[INET_ADDRSTRLEN]; 
 				Channel c;
 				rest = message.substr(7);
-				
 				//Transformando o numero do canal em int.
-				channel = stoi(rest);
 				
+				bool flagError = false;
+				
+				//Verificando se existe algum caractere diferente de número na string rest. 
+				for(int i=0; i<(int)rest.size(); i++){
+					if((int)rest[i] < 48 or (int)rest[i] > 57){
+						flagError = true;
+						break;
+					}
+				}
+			
+				if(flagError){
+					send(NewClient, message_errorchannel, strlen(message_errorchannel), 0);
+					continue;
+				}
+				
+				channel = stoi(rest);
+					
 				//Pegando o ip do cliente.
 				inet_ntop(AF_INET, &(SocketAddress.sin_addr), ip, INET_ADDRSTRLEN); 
 				
@@ -300,6 +320,7 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 					ConnectedChannel[NewClient] = c;
 					SetChannels.insert(channel);
 					IdChannel[channel] = c;
+					flagAdmin = true;
 				}
 				
 				
@@ -309,6 +330,8 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 				
 				sendMessageWelcome+=rest + '\n';
 				
+				if(flagAdmin) sendMessageWelcome += "You are admin this channel !!\n";
+				
 				//Mandando a mesnagem de boas vindas ao canal.
 				send(NewClient, sendMessageWelcome.c_str(), sendMessageWelcome.size(), 0);
 				
@@ -317,10 +340,6 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 			else 
 				send(NewClient, message_errorchannel, strlen(message_errorchannel), 0);
 			
-			//Limpando as strings.	
-			message.clear();
-			type.clear();
-			rest.clear();
 		}
 		
 	
