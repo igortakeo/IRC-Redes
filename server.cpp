@@ -109,8 +109,14 @@ void ClientQuit(int id){
 }
 
 //Enviando mensagens para todos os clientes
-void SendMessages(string buffer){
-	vector<int>AuxIdClients = IdClients;
+void SendMessages(string buffer, int channel){
+	
+	vector<int>AuxIdClients;
+	
+	//Pegando o vetor do canal especificado, se channel for igual a -1 quer dizer que o servidor esta fechando.
+	if(channel == -1) AuxIdClients = IdClients;
+	else AuxIdClients = IdChannel[channel].UsersChannel;
+	
 	for(auto i : AuxIdClients){
 		int tries = 5;
 		while(tries){
@@ -158,7 +164,7 @@ void ThreadMessageClients(int id){
 		for(int i=0; i<strlen(buffer); i++) NewBuffer += buffer[i];
 		
 		//Reenvia a mensagem  para os clientes
-		SendMessages(NewBuffer);
+		SendMessages(NewBuffer, ConnectedChannel[id].idChannel);
 	}		
 }	
 
@@ -374,7 +380,7 @@ void MessagesStdin(){
 			printf("Closing Server...\n");
 			
 			//Enviando a mensagem para os clientes disconectarem
-			SendMessages("/disconnect");
+			SendMessages("/disconnect", -1);
 			
 			//Fechando o servidor
 			close(NewServer);
