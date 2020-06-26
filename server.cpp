@@ -60,6 +60,9 @@ class Channel{
 	
 	//O map guarda a relação de id do usuário com o seu respectivo ip.
 	map<int, string>UsersIp;
+	
+	//O map guarda a relacao de id do usuario e se ele esta mutado ou nao.
+	map<int, bool>UsersMute;
 		
 	string whois(int id){
 		string sendIP = Clients[id]+" user ip: "+UsersIp[id];
@@ -79,15 +82,31 @@ class Channel{
 	}
 	
 	void mute(int id){
-		
-		
-		
+		if(id == idAdmin){
+			string errorAdmin = "Error, command not allowed !!";
+			send(id, errorAdmin.c_str(), errorAdmin.size(), 0);					
+		}
+		else{
+			UsersMute[id] = true;
+			string messageMuted = Clients[id]+" muted";
+			string messageErrorMuted = "You are muted !!";
+			send(idAdmin, messageMuted.c_str(), messageMuted.size(), 0);
+			send(id, messageErrorMuted.c_str(), messageErrorMuted.size(), 0);
+		}
 	}
 	
 	void unmute(int id){
-		
-		
-		
+		if(id == idAdmin){
+			string errorAdmin = "Error, command not allowed !!";
+			send(id, errorAdmin.c_str(), errorAdmin.size(), 0);		
+		}
+		else{
+			UsersMute[id] = false;
+			string messageMute = Clients[id]+" unmuted";
+			string messageNoErrorMuted = "You are not muted !!";
+			send(idAdmin, messageMute.c_str(), messageMute.size(), 0);
+			send(id, messageNoErrorMuted.c_str(), messageNoErrorMuted.size(), 0);
+		}
 	}
 			
 };
@@ -258,16 +277,45 @@ void ThreadMessageClients(int id){
 				if(id != IdChannel[ConnectedChannel[id]].idAdmin){
 					send(id, messageError.c_str(), messageError.size(), 0);
 				}
+				else{
+					if(Nicknames.count(user) != 0){
+						int idUser = ClientsReverse[user];
+						if(count(IdChannel[ConnectedChannel[id]].UsersChannel.begin(),IdChannel[ConnectedChannel[id]].UsersChannel.end(),idUser) == 1){
+							IdChannel[ConnectedChannel[id]].mute(idUser); 
+						}
+						else send(id, messageErrorUserChannel.c_str(), messageErrorUserChannel.size(), 0);	
+					
+					}
+					else send(id, messageErrorUserExist.c_str(), messageErrorUserExist.size(), 0); 
+					
+				}
 				continue;				
 			}
 			else if(message == "/unmute"){
 				if(id != IdChannel[ConnectedChannel[id]].idAdmin){
-					send(id, messageError.c_str(), messageError.size(), 0);
+					send(id, messageError.c_str(), messageError.size(), 0);		
 				}
+				else{
+					if(Nicknames.count(user) != 0){
+						int idUser = ClientsReverse[user];	
+						if(count(IdChannel[ConnectedChannel[id]].UsersChannel.begin(),IdChannel[ConnectedChannel[id]].UsersChannel.end(),idUser) == 1){
+							IdChannel[ConnectedChannel[id]].unmute(idUser);
+						}
+						else send(id, messageErrorUserChannel.c_str(), messageErrorUserChannel.size(), 0);								
+					}
+					else send(id, messageErrorUserExist.c_str(), messageErrorUserExist.size(), 0); 
+				} 
+				
 				continue;				
 			}	
 			
 			
+		}
+		
+		if(IdChannel[ConnectedChannel[id]].UsersMute[id]){
+			string messageMuted = "You are muted !!";
+			send(id, messageMuted.c_str(), messageMuted.size(), 0);
+			continue;
 		}
 		
 		 //Escreve a mensagem recebida
