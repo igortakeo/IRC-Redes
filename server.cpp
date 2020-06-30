@@ -229,6 +229,9 @@ void ThreadMessageClients(int id){
 			string messageError = "You no are admin !";
 			string messageErrorUserExist = "User not exist";
 			string messageErrorUserChannel = "User not belongs in this channel";
+			string messageErrorNickname = "Nickname is same";
+			string messageErrorNicknameExist = "Nickname already exist";
+			string messageNicknameChanged = "Nickame was changed";
 			
 			int i = 0;
 			
@@ -307,9 +310,22 @@ void ThreadMessageClients(int id){
 				} 
 				
 				continue;				
+			}
+			else if(message == "/nickname"){
+				
+				if(Clients[id] == user) send(id, messageErrorNickname.c_str(), messageErrorNickname.size(), 0);
+				else if(Nicknames.count(user) == 1) send(id, messageErrorNicknameExist.c_str(), messageErrorNicknameExist.size(), 0);
+				else{
+					Nicknames.erase(Clients[id]);
+					ClientsReverse.erase(Clients[id]);
+					Clients[id] = user;
+					ClientsReverse[user] = id;
+					send(id, messageNicknameChanged.c_str(), messageNicknameChanged.size(), 0);
+				}
+				
 			}	
 			
-			
+			continue;
 		}
 		
 		if(IdChannel[ConnectedChannel[id]].UsersMute[id]){
@@ -342,58 +358,69 @@ void MessageClients(){
 }
 
 void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
-	char message_welcome[50] = "Welcome to server\nInsert your Nickname: ";
+	char message_welcome[150] = "Welcome to server\nInsert your Nickname(less or equal 50 characters ASCII): ";
 	char message_joinchannel[200] = "Choose one channel to join\n(/list: channels list that already exist)\n(/join '#numberchannel': to join one channel)\n";
 	char message_accept[50] = "Nickname accepted";
-	char message_error_nickame[50] = "Nickname already exist\nInsert your Nickname: ";
+	char message_error_nickame[150] = "Nickname already exist\nInsert your Nickname(less or equal 50 characters ASCII): ";
 	char message_emtpychannel[50] = "List empty !\n"; 
 	char message_welcomechannel[50] = "Welcome to Channel #";
 	char message_errorchannel[50] = "Error, type again\n";
+	char message_nicklarge[150] = "Nickname too large, type again\nInsert your Nickname(less or equal 50 characters ASCII): ";
 	
 	char buffer[2050];
 	
 	while(true){
 		
-		//Zera o buffer
+		//Zera o buffer.
 		memset(buffer, 0, sizeof buffer);
 		
-		//Aceita o cliente
+		//Aceita o cliente.
 		int NewClient = accept(NewServer, (struct sockaddr*)&SocketAddress, (socklen_t*)&addrlen);
 		
-		//Se falhar, retorna
+		//Se falhar, retorna.
 		if(NewClient == -1){
 			printf("Accept Failed\n");
 			continue;
 		}
 		
-		//Envia a mensagem de boas vindas ao cliente
+		//Envia a mensagem de boas vindas ao cliente.
 		send(NewClient, message_welcome, strlen(message_welcome), 0);
 			
 		string nick;
 			
 		while(true){
 			
-			//Lendo nickname do cliente
+			//Lendo nickname do cliente.
 			int ret = read(NewClient, buffer , sizeof buffer);
 			
-			//Transformando pra std::string
+			//Transformando pra std::string.
 			nick.append(buffer, buffer+strlen(buffer));
 			
-			//Verificando se o nickname ja existe	
-			if(Nicknames.count(nick) == 0){
+			//Verificando se o nickname tem mais de 50 caracteres.
+			if(nick.size() > 50){
 				
-				//Mandando a mensagem que o nickname foi aceito
+				//Dizendo que o nick esta muito grande.
+				send(NewClient, message_nicklarge, strlen(message_nicklarge), 0);
+			}
+			
+			//Verificando se o nickname ja existe.
+			else if(Nicknames.count(nick) == 0){
+				
+				//Mandando a mensagem que o nickname foi aceito.
 				send(NewClient, message_accept, strlen(message_accept), 0);
 		
 				break;
 			}
-			//Enviando a mensagem de erro para o cliente
-			send(NewClient, message_error_nickame, strlen(message_error_nickame), 0);
+			else{
+				
+				//Enviando a mensagem de erro para o cliente.
+				send(NewClient, message_error_nickame, strlen(message_error_nickame), 0);
+			}
 			
-			//Zera o buffer
+			//Zera o buffer.
 			memset(buffer, 0, sizeof buffer);
 			
-			//Limpando o nick
+			//Limpando o nick.
 			nick.clear();
 		}
 		
@@ -578,7 +605,7 @@ int main(){
 	//Vincula o socket a porta 8080
 	SocketAddress.sin_family = AF_INET;
 	SocketAddress.sin_addr.s_addr = INADDR_ANY;	
-	SocketAddress.sin_port = htons(8080);
+	SocketAddress.sin_port = htons(1048);
 	
 	//Se falhar, retorna
 	if(bind(NewServer, (struct sockaddr*)&SocketAddress, sizeof SocketAddress) == -1){

@@ -108,16 +108,22 @@ int main(){
 	
 	while(true){
 		
-		//Recebendo o nickname do cliente
+		//Recebendo o nickname do cliente.
 		getline(cin, nick);
 		
-		//Verificando se eh um sinal de EOF (Ctrl + D)
+		//Verificando se eh um sinal de EOF (Ctrl + D).
 		if(cin.eof()){
 			cout << "Bye!" << endl;
 			close(NewSocket);
 			return 0;
 		}
 		
+		//Verificando se o nickname eh valido.
+		if(nick.size() == 0){
+			printf("Nickname invalid, type again\nInsert your Nickname(less or equal 50 characters ASCII): ");
+			continue;
+		}
+	
 		//Enviando para o servidor o nickname
 		send(NewSocket, nick.c_str(), nick.size(), 0); 
 		
@@ -132,7 +138,8 @@ int main(){
 		
 		//Verificando se o nickname foi aceito
 		if(strcmp(buffer,"Nickname accepted") == 0){
-			printf("\n\n");
+			printf("\n");
+			printf("-------------------------------------------------------------------\n");
 			string joinServer = nick + " joined the server\n";
 			send(NewSocket, joinServer.c_str(), joinServer.size(), 0);
 			break; 
