@@ -172,7 +172,13 @@ void ClientQuit(int id){
 			break;
 		}
 	}
-
+	
+	IdChannel[ConnectedChannel[id]].number--;
+	
+	if(IdChannel[ConnectedChannel[id]].number == 0){
+		SetChannels.erase(ConnectedChannel[id]);	
+	}
+	
 }
 
 //Enviando mensagens para todos os clientes
