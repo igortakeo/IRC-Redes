@@ -326,6 +326,7 @@ void ThreadMessageClients(int id){
 					ClientsReverse.erase(Clients[id]);
 					Clients[id] = user;
 					ClientsReverse[user] = id;
+					Nicknames.insert(user);
 					send(id, messageNicknameChanged.c_str(), messageNicknameChanged.size(), 0);
 				}
 				
