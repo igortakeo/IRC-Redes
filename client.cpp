@@ -90,7 +90,7 @@ int main(){
 	//Para conectar atraves da rede 	
 	ServerAddress.sin_port = htons(1048);
 	//ServerAddress.sin_addr.s_addr = inet_addr("159.89.214.31");	
-	//ServerAddress.sin_addr.s_addr = inet_addr("127.0.0.1");	
+	ServerAddress.sin_addr.s_addr = inet_addr("192.168.0.110");	
 	
 	int retConnect = connect(NewSocket, (struct sockaddr*)&ServerAddress, sizeof ServerAddress);
 	if(retConnect < 0){
