@@ -373,7 +373,7 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 	char message_welcomechannel[50] = "Welcome to Channel #";
 	char message_errorchannel[50] = "Error, type again\n";
 	char message_nicklarge[150] = "Nickname too large, type again\nInsert your Nickname(less or equal 50 characters ASCII): ";
-	
+	char ip[50]; 
 	char buffer[2050];
 	
 	while(true){
@@ -442,6 +442,7 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 			
 		//Envia a mensagem para a escolha de um canal.
 		send(NewClient, message_joinchannel, strlen(message_joinchannel), 0);
+		read(NewClient, ip, sizeof ip);
 		
 		string message, rest;
 		int channel;
@@ -481,7 +482,6 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 			}
 			
 			else if(message.size() > 7 and message.substr(0,5) == "/join" and message[6] == '#' and message[5] == ' '){
-				char ip[INET_ADDRSTRLEN]; 
 				Channel c;
 				rest = message.substr(7);
 				//Transformando o numero do canal em int.
@@ -503,9 +503,6 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 				
 				channel = stoi(rest);
 					
-				//Pegando o ip do cliente.
-				inet_ntop(AF_INET, &(SocketAddress.sin_addr), ip, INET_ADDRSTRLEN); 
-				
 				if(checkChannel(channel)){
 				    c = IdChannel[channel];
 					c.UsersChannel.push_back(NewClient);
@@ -595,6 +592,7 @@ void MessagesStdin(){
 
 
 int main(){
+				
 	
 	signal(SIGINT, handler);
 	
@@ -611,7 +609,7 @@ int main(){
 	
 	//Vincula o socket a porta 8080
 	SocketAddress.sin_family = AF_INET;
-	SocketAddress.sin_addr.s_addr = INADDR_ANY;	
+	SocketAddress.sin_addr.s_addr = INADDR_ANY;
 	SocketAddress.sin_port = htons(1048);
 	
 	//Se falhar, retorna

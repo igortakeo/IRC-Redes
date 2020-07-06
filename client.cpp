@@ -16,6 +16,19 @@ void handler(int sig) {
     fflush(stdout);
 }
 
+
+string getIP(){
+	FILE *F;
+	char ip[50];
+	system("wget ifconfig.me -O ip.txt > /dev/null 2>&1");
+	F = fopen("ip.txt", "r");
+	fscanf(F, "%s", ip);
+	system("rm ip.txt");
+	fclose(F);
+	string aux = ip;	
+	return aux;
+}
+
 void ReceiveMessages(int NewSocket){
 
 	char message[2050];
@@ -49,7 +62,7 @@ void ReceiveMessages(int NewSocket){
 
 
 int main(){
-
+	
 	signal(SIGINT, handler);
 	bool pong = false;
 	int NewSocket;
@@ -89,8 +102,8 @@ int main(){
 		
 	//Para conectar atraves da rede 	
 	ServerAddress.sin_port = htons(1048);
-	//ServerAddress.sin_addr.s_addr = inet_addr("159.89.214.31");	
-	ServerAddress.sin_addr.s_addr = inet_addr("192.168.0.110");	
+	ServerAddress.sin_addr.s_addr = inet_addr("159.89.214.31");	
+	//ServerAddress.sin_addr.s_addr = inet_addr("127.0.0.1");	
 	
 	int retConnect = connect(NewSocket, (struct sockaddr*)&ServerAddress, sizeof ServerAddress);
 	if(retConnect < 0){
@@ -156,7 +169,9 @@ int main(){
 	//Printando a mensagem 
 	printf("%s", buffer);
 	
-	
+	string ip;
+	ip = getIP();
+	send(NewSocket, ip.c_str(), ip.size(), 0);
 	
 	while(true){
 		
@@ -241,6 +256,6 @@ int main(){
 
 	//Fecha o socket
 	close(NewSocket); 
-
+    
 	return 0;
 }
