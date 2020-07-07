@@ -394,17 +394,23 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 		send(NewClient, message_welcome, strlen(message_welcome), 0);
 			
 		string nick;
-			
+		bool flagEOF = false;
 		while(true){
 			
 			//Lendo nickname do cliente.
 			int ret = read(NewClient, buffer , sizeof buffer);
-			
+	
 			//Transformando pra std::string.
 			nick.append(buffer, buffer+strlen(buffer));
 			
+			//Verificando se o cliente deu sinal de eof.	
+			if(nick == "/quit"){
+				flagEOF = true;
+				break;
+			}
+			
 			//Verificando se o nickname tem mais de 50 caracteres.
-			if(nick.size() > 50){
+			else if(nick.size() > 50){
 				
 				//Dizendo que o nick esta muito grande.
 				send(NewClient, message_nicklarge, strlen(message_nicklarge), 0);
@@ -430,6 +436,9 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 			//Limpando o nick.
 			nick.clear();
 		}
+		
+		//Verificando o sinal de eof do cliente.	
+		if(flagEOF) continue;
 		
 		//Zera o buffer.
 		memset(buffer, 0, sizeof buffer);
@@ -462,9 +471,17 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 			
 			//Transformando para std::string.
 			message.append(buffer, buffer+strlen(buffer));
-		
+			
+			//Verificando se o cliente deu sinal de eof.
+			if(message == "/quit"){
+				//Informando que o usuario desconectou.
+				cout << nick << " disconnected from server" << endl; 
+				flagEOF = true;	
+				break;
+			}
+			
 			//Verificando se o cliente pediu para ver a lista de canais.
-			if(message == "/list"){
+			else if(message == "/list"){
 				
 				//Verificando se a lista esta vazia.
 				if(SetChannels.empty()) 
@@ -541,6 +558,9 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 				send(NewClient, message_errorchannel, strlen(message_errorchannel), 0);
 			
 		}
+		
+		//Verificando o sinal de EOF do cliente.
+		if(flagEOF) continue;
 		
 	
 		//Relacionando o id do cliente com o seu nickname.

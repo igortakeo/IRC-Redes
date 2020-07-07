@@ -72,6 +72,7 @@ int main(){
 	char buffer[4096]; 
 	int ret;
 	string nick, message;	
+	string eofnick = "/quit";
 		
 	//Criando um socket
 	NewSocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -87,14 +88,14 @@ int main(){
 	while(true){
 		string input;
 		getline(cin, input);
-		if(cin.eof()){
+		if(cin.eof() or input == "/quit"){
 			cout << "Bye!" << endl;
 			return 0;
 		}
 		if(input == "/connect") break;
 		printf("Invalid command\n");
 	}
-
+	
 	ServerAddress.sin_family = AF_INET;
 	
 	//Para conectar localhost
@@ -102,8 +103,8 @@ int main(){
 		
 	//Para conectar atraves da rede 	
 	ServerAddress.sin_port = htons(1048);
-	ServerAddress.sin_addr.s_addr = inet_addr("159.89.214.31");	
-	//ServerAddress.sin_addr.s_addr = inet_addr("127.0.0.1");	
+	//ServerAddress.sin_addr.s_addr = inet_addr("159.89.214.31");	
+	ServerAddress.sin_addr.s_addr = inet_addr("127.0.0.1");	
 	
 	int retConnect = connect(NewSocket, (struct sockaddr*)&ServerAddress, sizeof ServerAddress);
 	if(retConnect < 0){
@@ -113,7 +114,7 @@ int main(){
 	
 	//Zerando o buffer
 	memset(buffer, 0, sizeof buffer);
-		
+	
 	//Recebendo a mensagem de boas vindas do servidor para testes
 	ret = read(NewSocket, buffer, sizeof buffer); 
 	
@@ -126,7 +127,9 @@ int main(){
 		getline(cin, nick);
 		
 		//Verificando se eh um sinal de EOF (Ctrl + D).
-		if(cin.eof()){
+		if(cin.eof() or nick == "/quit"){
+			send(NewSocket, eofnick.c_str(), eofnick.size(), 0);
+			printf("\n");
 			cout << "Bye!" << endl;
 			close(NewSocket);
 			return 0;
@@ -180,6 +183,15 @@ int main(){
 		
 		//Recebendo a mensagem do cliente.	
 		getline(cin, message);
+		
+		//Verificando se eh um sinal de EOF (Ctrl + D).
+		if(cin.eof() or message == "/quit"){
+			send(NewSocket, eofnick.c_str(), eofnick.size(), 0);
+			printf("\n");
+			cout << "Bye!" << endl;
+			close(NewSocket);
+			return 0;
+		}
 		
 		//Mandando a mensagem para o servidor.
 		send(NewSocket, message.c_str(), message.size(), 0);
