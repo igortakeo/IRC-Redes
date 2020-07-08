@@ -41,6 +41,9 @@ vector<int>IdClients;
 //A fila indica a chegada de um novo cliente.
 queue<int>QueueClients;
 
+//O map guarda o idClient e seu idWindowChannel.
+map<int, int>ChannelSocket;
+
 
 class Channel{
 	
@@ -77,6 +80,7 @@ class Channel{
 		else{ 
 			string messageDisconnect = "/disconnect";
 			send(id, messageDisconnect.c_str(), messageDisconnect.size(), 0);
+			send(ChannelSocket[id], messageDisconnect.c_str(), messageDisconnect.size(), 0);
 			ClientQuit(id);
 		}	
 	}
@@ -162,6 +166,9 @@ void ClientQuit(int id){
 	//Apagando do map a dupla nick/id.
 	ClientsReverse.erase(nick);
 	
+	//Apagando do map a dupla idClient/idWindowChannel.
+	ChannelSocket.erase(id);
+	
 	//Apagando do map de ips a dupla id/ip.
 	IdChannel[ConnectedChannel[id]].UsersIp.erase(id);
 	
@@ -173,6 +180,7 @@ void ClientQuit(int id){
 		}
 	}
 	
+	//Diminuindo o numero de pessoas no canal.
 	IdChannel[ConnectedChannel[id]].number--;
 	
 	if(IdChannel[ConnectedChannel[id]].number == 0){
@@ -193,11 +201,14 @@ void SendMessages(string buffer, int channel){
 	for(auto i : AuxIdClients){
 		int tries = 5;
 		while(tries){
-			if(send(i, buffer.c_str(), buffer.size(), 0) == -1) tries--;
+			if(send(ChannelSocket[i], buffer.c_str(), buffer.size(), 0) == -1) tries--;
 			else break;
 		}
 		
-		if(buffer == "/disconnect") ClientQuit(i);		
+		if(buffer == "/disconnect"){
+			send(i, buffer.c_str(), buffer.size(), 0);
+			ClientQuit(i);		
+		}
 		if(tries == 0){
 			ClientQuit(i);
 			close(i);
@@ -224,6 +235,7 @@ void ThreadMessageClients(int id){
 			continue;
 		}
 		else if(strcmp(buffer, "/quit") == 0){
+			send(ChannelSocket[id], buffer, strlen(buffer), 0);
 			ClientQuit(id);
 			break;
 		}
@@ -373,6 +385,7 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 	char message_welcomechannel[50] = "Welcome to Channel #";
 	char message_errorchannel[50] = "Error, type again\n";
 	char message_nicklarge[150] = "Nickname too large, type again\nInsert your Nickname(less or equal 50 characters ASCII): ";
+	char message_welcomeclient[50] = "Welcome";
 	char ip[50]; 
 	char buffer[2050];
 	
@@ -451,6 +464,10 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 			
 		//Envia a mensagem para a escolha de um canal.
 		send(NewClient, message_joinchannel, strlen(message_joinchannel), 0);
+		
+		memset(ip, 0, sizeof ip);
+		
+		//Lendo o ip do cliente.
 		read(NewClient, ip, sizeof ip);
 		
 		string message, rest;
@@ -540,6 +557,14 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 					flagAdmin = true;
 				}
 				
+				//Abrindo um terminal para mostrar as mensagens do canal.
+				system("gnome-terminal -e 'sh -c \"./windowchannel\"' > /dev/null 2>&1");
+			
+				//Aceita o canal.
+				int NewWindowChannel = accept(NewServer, (struct sockaddr*)&SocketAddress, (socklen_t*)&addrlen);
+				
+				//Relacionando o idClient com o seu idWindowChannel.
+				ChannelSocket[NewClient] = NewWindowChannel;
 				
 				string sendMessageWelcome;
 				
@@ -549,8 +574,9 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 				
 				if(flagAdmin) sendMessageWelcome += "You are admin this channel !!\n";
 				
-				//Mandando a mesnagem de boas vindas ao canal.
-				send(NewClient, sendMessageWelcome.c_str(), sendMessageWelcome.size(), 0);
+				//Mandando a mensagem de boas vindas ao canal.
+				send(NewWindowChannel, sendMessageWelcome.c_str(), sendMessageWelcome.size(), 0);
+				send(NewClient, message_welcomeclient, strlen(message_welcomeclient), 0);
 				
 				break;
 			}
@@ -627,10 +653,10 @@ int main(){
 		return 0;
 	}
 	
-	//Vincula o socket a porta 8080
+	//Vincula o socket a porta 10048
 	SocketAddress.sin_family = AF_INET;
 	SocketAddress.sin_addr.s_addr = INADDR_ANY;
-	SocketAddress.sin_port = htons(1048);
+	SocketAddress.sin_port = htons(10048);
 	
 	//Se falhar, retorna
 	if(bind(NewServer, (struct sockaddr*)&SocketAddress, sizeof SocketAddress) == -1){

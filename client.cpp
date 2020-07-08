@@ -16,7 +16,6 @@ void handler(int sig) {
     fflush(stdout);
 }
 
-
 string getIP(){
 	FILE *F;
 	char ip[50];
@@ -66,12 +65,10 @@ int main(){
 	signal(SIGINT, handler);
 	bool pong = false;
 	int NewSocket;
-	struct sockaddr_in ServerAddress;
-	
-	//Buffer para enviar mensagens
+	struct sockaddr_in ServerAddress;	
 	char buffer[4096]; 
 	int ret;
-	string nick, message;	
+	string nick, message, ip;	
 	string eofnick = "/quit";
 		
 	//Criando um socket
@@ -98,11 +95,8 @@ int main(){
 	
 	ServerAddress.sin_family = AF_INET;
 	
-	//Para conectar localhost
-	//ServerAddress.sin_port = htons(8080);
-		
 	//Para conectar atraves da rede 	
-	ServerAddress.sin_port = htons(1048);
+	ServerAddress.sin_port = htons(10048);
 	//ServerAddress.sin_addr.s_addr = inet_addr("159.89.214.31");	
 	ServerAddress.sin_addr.s_addr = inet_addr("127.0.0.1");	
 	
@@ -172,8 +166,10 @@ int main(){
 	//Printando a mensagem 
 	printf("%s", buffer);
 	
-	string ip;
+	//Pegando o ip publico do cliente.
 	ip = getIP();
+	
+	//Mandando o ip para o servidor.
 	send(NewSocket, ip.c_str(), ip.size(), 0);
 	
 	while(true){
@@ -199,19 +195,20 @@ int main(){
 		//Lendo a mensagem de validacao do servidor.	
 		read(NewSocket, buffer, sizeof buffer);
 		
+		string RetMessage;
+		
+		//Cortando a mensagem recebida pelo servidor.
+		RetMessage.append(buffer, buffer+strlen(buffer));
+		
+		//Verificando se foi possivel entrar no canal.
+		if(RetMessage == "Welcome") break;
+
 		//Printando a mensagem.
 		printf("%s", buffer);
 		
-		string cutMessage;
-		
-		//Cortando a mensagem recebida pelo servidor.
-		cutMessage.append(buffer, buffer+7);
-		
-		//Verificando se foi possivel entrar no canal.
-		if(cutMessage == "Welcome") break;
-
 	}
 	
+	printf("Type the messages below\n");
 		
 	thread Receive(ReceiveMessages, NewSocket);
 	Receive.detach();
@@ -224,13 +221,11 @@ int main(){
 		//Caractere auxiliar
 		char c;
 		int i = 0;
-		
 		//Para sair com Ctrl+D
 		if(scanf("%c", &c) == EOF){
 			memset(buffer, 0, sizeof buffer);
 			strcpy(buffer, "/quit");
 			c = '\n';
-			cout << "Bye!" << endl;
 		}
 		
 		while(c != '\n'){
@@ -258,6 +253,7 @@ int main(){
 		//Se o comando "/quit" for enviado, o programa deve encerrar
 		if(strcmp(buffer, "/quit") == 0){
 			send(NewSocket, buffer, strlen(buffer), 0);
+			cout << "Bye!" << endl;
 			break;
 		}
 		
