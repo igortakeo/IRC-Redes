@@ -385,12 +385,16 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 	char message_welcomechannel[50] = "Welcome to Channel #";
 	char message_errorchannel[50] = "Error, type again\n";
 	char message_nicklarge[150] = "Nickname too large, type again\nInsert your Nickname(less or equal 50 characters ASCII): ";
-	char message_welcomeclient[50] = "Welcome";
-	char ip[50]; 
+	char message_welcomeclient[50] = "Welcome"; 
 	char buffer[2050];
+	string ip;
 	
 	while(true){
 		
+		
+		struct sockaddr_in SocketAddressClient;
+		int addrlenClient = sizeof SocketAddress;
+			
 		//Zera o buffer.
 		memset(buffer, 0, sizeof buffer);
 		
@@ -465,10 +469,9 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 		//Envia a mensagem para a escolha de um canal.
 		send(NewClient, message_joinchannel, strlen(message_joinchannel), 0);
 		
-		memset(ip, 0, sizeof ip);
-		
-		//Lendo o ip do cliente.
-		read(NewClient, ip, sizeof ip);
+		//Pegando ip do cliente
+		getpeername(NewClient, (struct sockaddr*)&SocketAddressClient, (socklen_t*)&addrlenClient);
+		ip = inet_ntoa(SocketAddressClient.sin_addr);
 		
 		string message, rest;
 		int channel;
@@ -656,7 +659,7 @@ int main(){
 	//Vincula o socket a porta 10048
 	SocketAddress.sin_family = AF_INET;
 	SocketAddress.sin_addr.s_addr = INADDR_ANY;
-	SocketAddress.sin_port = htons(10048);
+	SocketAddress.sin_port = htons(1048);
 	
 	//Se falhar, retorna
 	if(bind(NewServer, (struct sockaddr*)&SocketAddress, sizeof SocketAddress) == -1){

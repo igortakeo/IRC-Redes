@@ -23,9 +23,9 @@ int main(){
 	NewSocket = socket(AF_INET, SOCK_STREAM, 0);
 	
 	ServerAddress.sin_family = AF_INET;
-	ServerAddress.sin_port = htons(10048);
+	ServerAddress.sin_port = htons(1048);
 	//ServerAddress.sin_addr.s_addr = inet_addr("159.89.214.31");	
-	ServerAddress.sin_addr.s_addr = inet_addr("127.0.0.1");	
+	ServerAddress.sin_addr.s_addr = inet_addr("187.7.183.130");	
 	
 	
 	//Conectando ao servidor.

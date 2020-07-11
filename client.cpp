@@ -16,18 +16,6 @@ void handler(int sig) {
     fflush(stdout);
 }
 
-string getIP(){
-	FILE *F;
-	char ip[50];
-	system("wget ifconfig.me -O ip.txt > /dev/null 2>&1");
-	F = fopen("ip.txt", "r");
-	fscanf(F, "%s", ip);
-	system("rm ip.txt");
-	fclose(F);
-	string aux = ip;	
-	return aux;
-}
-
 void ReceiveMessages(int NewSocket){
 
 	char message[2050];
@@ -96,9 +84,9 @@ int main(){
 	ServerAddress.sin_family = AF_INET;
 	
 	//Para conectar atraves da rede 	
-	ServerAddress.sin_port = htons(10048);
+	ServerAddress.sin_port = htons(1048);
 	//ServerAddress.sin_addr.s_addr = inet_addr("159.89.214.31");	
-	ServerAddress.sin_addr.s_addr = inet_addr("127.0.0.1");	
+	ServerAddress.sin_addr.s_addr = inet_addr("187.7.183.130");	
 	
 	int retConnect = connect(NewSocket, (struct sockaddr*)&ServerAddress, sizeof ServerAddress);
 	if(retConnect < 0){
@@ -165,12 +153,6 @@ int main(){
 	
 	//Printando a mensagem 
 	printf("%s", buffer);
-	
-	//Pegando o ip publico do cliente.
-	ip = getIP();
-	
-	//Mandando o ip para o servidor.
-	send(NewSocket, ip.c_str(), ip.size(), 0);
 	
 	while(true){
 		
