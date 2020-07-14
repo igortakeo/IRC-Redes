@@ -8,7 +8,24 @@
 #include <thread>
 #include <iostream>
 #include <csignal>
+#include <fstream>
 using namespace std;
+
+//Salvando o ip e a porta em um arquivo .txt para a conexao do windowchannel.
+void saveIPPort(string ip_connect, string port){
+	ofstream MyFile("saveIPaddress.txt");
+	MyFile << ip_connect << ' ' << port << endl;
+	MyFile.close();
+}
+
+//Verificando se porta recebida pelo cliente.
+bool verifyPort(string port){
+	for(int i=0; i<port.size(); i++){
+		if((int)port[i] < 48 or (int)port[i] > 57)
+			return true;
+	}
+	return false;
+}
 
 void handler(int sig) {
     signal(SIGINT, handler);
@@ -48,15 +65,16 @@ void ReceiveMessages(int NewSocket){
 }
 
 
+
 int main(){
 	
 	signal(SIGINT, handler);
 	bool pong = false;
 	int NewSocket;
 	struct sockaddr_in ServerAddress;	
-	char buffer[4096]; 
+	char buffer[4096];
 	int ret;
-	string nick, message, ip;	
+	string nick, message, ip_connect, port;
 	string eofnick = "/quit";
 		
 	//Criando um socket
@@ -83,16 +101,55 @@ int main(){
 	
 	ServerAddress.sin_family = AF_INET;
 	
-	//Para conectar atraves da rede 	
-	ServerAddress.sin_port = htons(1048);
-	//ServerAddress.sin_addr.s_addr = inet_addr("159.89.214.31");	
-	ServerAddress.sin_addr.s_addr = inet_addr("187.7.183.130");	
+	printf("(To connect localhost use ip: 127.0.0.1)\n");
 	
-	int retConnect = connect(NewSocket, (struct sockaddr*)&ServerAddress, sizeof ServerAddress);
-	if(retConnect < 0){
-		printf("Connection Failed\n");	
-		return 0;
+	while(true){		
+		
+		
+		printf("Server IP addres: ");
+		
+		//Recebendo o ip para conexao.
+		getline(cin, ip_connect);
+		
+		//Verificando se eh um sinal de EOF (Ctrl + D).
+		if(cin.eof() or ip_connect == "/quit"){
+			if(ip_connect != "/quit")printf("\n");
+			cout << "Bye!" << endl;
+			close(NewSocket);
+			return 0;
+		}
+		
+		printf("Port to connection: ");
+		
+		//Recebendo porta para conexao.
+		getline(cin, port);
+		
+		//Verificando se eh um sinal de EOF (Ctrl + D).
+		if(cin.eof() or port == "/quit"){
+			if(port != "/quit")printf("\n");
+			cout << "Bye!" << endl;
+			close(NewSocket);
+			return 0;
+		}
+		
+		//Verificando porta.
+		if(verifyPort(port)){
+			printf("Connection Failed\n");
+			continue;
+		}
+		
+		//Declaracao da porta e ip.
+		ServerAddress.sin_port = htons(stoi(port));
+		ServerAddress.sin_addr.s_addr = inet_addr(ip_connect.c_str());	
+		
+		//Estabelecendo conexao.	
+		int retConnect = connect(NewSocket, (struct sockaddr*)&ServerAddress, sizeof ServerAddress);
+		if(retConnect < 0)printf("Connection Failed\n");
+		else break;
 	}
+	
+	//Funcao para salvar o ip e porta.
+	saveIPPort(ip_connect, port);
 	
 	//Zerando o buffer
 	memset(buffer, 0, sizeof buffer);
@@ -111,7 +168,7 @@ int main(){
 		//Verificando se eh um sinal de EOF (Ctrl + D).
 		if(cin.eof() or nick == "/quit"){
 			send(NewSocket, eofnick.c_str(), eofnick.size(), 0);
-			printf("\n");
+			if(nick != "/quit") printf("\n");
 			cout << "Bye!" << endl;
 			close(NewSocket);
 			return 0;
@@ -165,7 +222,7 @@ int main(){
 		//Verificando se eh um sinal de EOF (Ctrl + D).
 		if(cin.eof() or message == "/quit"){
 			send(NewSocket, eofnick.c_str(), eofnick.size(), 0);
-			printf("\n");
+			if(message != "/quit")printf("\n");
 			cout << "Bye!" << endl;
 			close(NewSocket);
 			return 0;
@@ -190,22 +247,26 @@ int main(){
 		
 	}
 	
-	printf("Type the messages below\n");
-		
 	thread Receive(ReceiveMessages, NewSocket);
 	Receive.detach();
+	
+	bool flag_barra_n= false;
 
 	while(true){
 		
 		//Limpando o buffer
 		memset(buffer, 0, sizeof buffer);
 		
+		printf("Type the message: ");
+		
 		//Caractere auxiliar
 		char c;
 		int i = 0;
+		
 		//Para sair com Ctrl+D
 		if(scanf("%c", &c) == EOF){
 			memset(buffer, 0, sizeof buffer);
+			flag_barra_n = true;
 			strcpy(buffer, "/quit");
 			c = '\n';
 		}
@@ -227,6 +288,7 @@ int main(){
 			if(scanf("%c", &c) == EOF){
 				memset(buffer, 0, sizeof buffer);
 				strcpy(buffer, "/quit");
+				printf("\n");
 				cout << "Bye!" << endl;
 				break;
 			}
@@ -235,6 +297,7 @@ int main(){
 		//Se o comando "/quit" for enviado, o programa deve encerrar
 		if(strcmp(buffer, "/quit") == 0){
 			send(NewSocket, buffer, strlen(buffer), 0);
+			if(flag_barra_n) printf("\n");
 			cout << "Bye!" << endl;
 			break;
 		}

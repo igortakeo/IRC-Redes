@@ -75,7 +75,7 @@ class Channel{
 	void kick(int id){
 		if(id == idAdmin){
 			string errorAdmin = "Error, command not allowed !!";
-			send(id, errorAdmin.c_str(), errorAdmin.size(), 0);		
+			send(ChannelSocket[id], errorAdmin.c_str(), errorAdmin.size(), 0);		
 		}
 		else{ 
 			string messageDisconnect = "/disconnect";
@@ -88,28 +88,28 @@ class Channel{
 	void mute(int id){
 		if(id == idAdmin){
 			string errorAdmin = "Error, command not allowed !!";
-			send(id, errorAdmin.c_str(), errorAdmin.size(), 0);					
+			send(ChannelSocket[id], errorAdmin.c_str(), errorAdmin.size(), 0);					
 		}
 		else{
 			UsersMute[id] = true;
 			string messageMuted = Clients[id]+" muted";
 			string messageErrorMuted = "You are muted !!";
-			send(idAdmin, messageMuted.c_str(), messageMuted.size(), 0);
-			send(id, messageErrorMuted.c_str(), messageErrorMuted.size(), 0);
+			send(ChannelSocket[idAdmin], messageMuted.c_str(), messageMuted.size(), 0);
+			send(ChannelSocket[id], messageErrorMuted.c_str(), messageErrorMuted.size(), 0);
 		}
 	}
 	
 	void unmute(int id){
 		if(id == idAdmin){
 			string errorAdmin = "Error, command not allowed !!";
-			send(id, errorAdmin.c_str(), errorAdmin.size(), 0);		
+			send(ChannelSocket[id], errorAdmin.c_str(), errorAdmin.size(), 0);		
 		}
 		else{
 			UsersMute[id] = false;
 			string messageMute = Clients[id]+" unmuted";
 			string messageNoErrorMuted = "You are not muted !!";
-			send(idAdmin, messageMute.c_str(), messageMute.size(), 0);
-			send(id, messageNoErrorMuted.c_str(), messageNoErrorMuted.size(), 0);
+			send(ChannelSocket[idAdmin], messageMute.c_str(), messageMute.size(), 0);
+			send(ChannelSocket[id], messageNoErrorMuted.c_str(), messageNoErrorMuted.size(), 0);
 		}
 	}
 			
@@ -262,25 +262,25 @@ void ThreadMessageClients(int id){
 				
 			if(message == "/whois"){
 				if(id != IdChannel[ConnectedChannel[id]].idAdmin){
-					send(id, messageError.c_str(), messageError.size(), 0);
+					send(ChannelSocket[id], messageError.c_str(), messageError.size(), 0);
 				}	
 				else{
 					if(Nicknames.count(user) != 0){
 						int idUser = ClientsReverse[user];
 						if(count(IdChannel[ConnectedChannel[id]].UsersChannel.begin(),IdChannel[ConnectedChannel[id]].UsersChannel.end(),idUser) == 1){
 							string sendIP = IdChannel[ConnectedChannel[id]].whois(idUser);
-							send(id, sendIP.c_str(), sendIP.size(), 0);
+							send(ChannelSocket[id], sendIP.c_str(), sendIP.size(), 0);
 						}
-						else send(id, messageErrorUserChannel.c_str(), messageErrorUserChannel.size(), 0);
+						else send(ChannelSocket[id], messageErrorUserChannel.c_str(), messageErrorUserChannel.size(), 0);
 					}
-					else send(id, messageErrorUserExist.c_str(), messageErrorUserExist.size(), 0); 
+					else send(ChannelSocket[id], messageErrorUserExist.c_str(), messageErrorUserExist.size(), 0); 
 					
 				}	
 				continue;
 			}
 			else if(message == "/kick"){
 				if(id != IdChannel[ConnectedChannel[id]].idAdmin){
-					send(id, messageError.c_str(), messageError.size(), 0);
+					send(ChannelSocket[id], messageError.c_str(), messageError.size(), 0);
 				}
 				else{
 					if(Nicknames.count(user) != 0){	
@@ -288,15 +288,15 @@ void ThreadMessageClients(int id){
 						if(count(IdChannel[ConnectedChannel[id]].UsersChannel.begin(),IdChannel[ConnectedChannel[id]].UsersChannel.end(),idUser) == 1){
 							IdChannel[ConnectedChannel[id]].kick(idUser);
 						}
-						else send(id, messageErrorUserChannel.c_str(), messageErrorUserChannel.size(), 0);
+						else send(ChannelSocket[id], messageErrorUserChannel.c_str(), messageErrorUserChannel.size(), 0);
 					}
-					else send(id, messageErrorUserExist.c_str(), messageErrorUserExist.size(), 0); 
+					else send(ChannelSocket[id], messageErrorUserExist.c_str(), messageErrorUserExist.size(), 0); 
 				}
 				continue;	
 			}
 			else if(message == "/mute"){
 				if(id != IdChannel[ConnectedChannel[id]].idAdmin){
-					send(id, messageError.c_str(), messageError.size(), 0);
+					send(ChannelSocket[id], messageError.c_str(), messageError.size(), 0);
 				}
 				else{
 					if(Nicknames.count(user) != 0){
@@ -304,17 +304,17 @@ void ThreadMessageClients(int id){
 						if(count(IdChannel[ConnectedChannel[id]].UsersChannel.begin(),IdChannel[ConnectedChannel[id]].UsersChannel.end(),idUser) == 1){
 							IdChannel[ConnectedChannel[id]].mute(idUser); 
 						}
-						else send(id, messageErrorUserChannel.c_str(), messageErrorUserChannel.size(), 0);	
+						else send(ChannelSocket[id], messageErrorUserChannel.c_str(), messageErrorUserChannel.size(), 0);	
 					
 					}
-					else send(id, messageErrorUserExist.c_str(), messageErrorUserExist.size(), 0); 
+					else send(ChannelSocket[id], messageErrorUserExist.c_str(), messageErrorUserExist.size(), 0); 
 					
 				}
 				continue;				
 			}
 			else if(message == "/unmute"){
 				if(id != IdChannel[ConnectedChannel[id]].idAdmin){
-					send(id, messageError.c_str(), messageError.size(), 0);		
+					send(ChannelSocket[id], messageError.c_str(), messageError.size(), 0);		
 				}
 				else{
 					if(Nicknames.count(user) != 0){
@@ -322,24 +322,24 @@ void ThreadMessageClients(int id){
 						if(count(IdChannel[ConnectedChannel[id]].UsersChannel.begin(),IdChannel[ConnectedChannel[id]].UsersChannel.end(),idUser) == 1){
 							IdChannel[ConnectedChannel[id]].unmute(idUser);
 						}
-						else send(id, messageErrorUserChannel.c_str(), messageErrorUserChannel.size(), 0);								
+						else send(ChannelSocket[id], messageErrorUserChannel.c_str(), messageErrorUserChannel.size(), 0);								
 					}
-					else send(id, messageErrorUserExist.c_str(), messageErrorUserExist.size(), 0); 
+					else send(ChannelSocket[id], messageErrorUserExist.c_str(), messageErrorUserExist.size(), 0); 
 				} 
 				
 				continue;				
 			}
 			else if(message == "/nickname"){
 				
-				if(Clients[id] == user) send(id, messageErrorNickname.c_str(), messageErrorNickname.size(), 0);
-				else if(Nicknames.count(user) == 1) send(id, messageErrorNicknameExist.c_str(), messageErrorNicknameExist.size(), 0);
+				if(Clients[id] == user) send(ChannelSocket[id], messageErrorNickname.c_str(), messageErrorNickname.size(), 0);
+				else if(Nicknames.count(user) == 1) send(ChannelSocket[id], messageErrorNicknameExist.c_str(), messageErrorNicknameExist.size(), 0);
 				else{
 					Nicknames.erase(Clients[id]);
 					ClientsReverse.erase(Clients[id]);
 					Clients[id] = user;
 					ClientsReverse[user] = id;
 					Nicknames.insert(user);
-					send(id, messageNicknameChanged.c_str(), messageNicknameChanged.size(), 0);
+					send(ChannelSocket[id], messageNicknameChanged.c_str(), messageNicknameChanged.size(), 0);
 				}
 				
 			}	
@@ -561,8 +561,9 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 				}
 				
 				//Abrindo um terminal para mostrar as mensagens do canal.
-				system("gnome-terminal -e 'sh -c \"./windowchannel\"' > /dev/null 2>&1");
-			
+				system("gnome-terminal -e 'sh -c \"./windowchannel < saveIPaddress.txt\"' > /dev/null 2>&1");
+				system("rm saveIPaddress.txt");
+				
 				//Aceita o canal.
 				int NewWindowChannel = accept(NewServer, (struct sockaddr*)&SocketAddress, (socklen_t*)&addrlen);
 				
@@ -640,6 +641,14 @@ void MessagesStdin(){
 }
 
 
+bool verifyPort(string port){
+	for(int i=0; i<port.size(); i++){
+		if((int)port[i] < 48 or (int)port[i] > 57)
+			return true;
+	}
+	return false;
+}
+
 int main(){
 				
 	
@@ -647,7 +656,8 @@ int main(){
 	
 	struct sockaddr_in SocketAddress;
 	int addrlen = sizeof SocketAddress;
-
+	string port;
+	
 	//Cria um socket
 	NewServer = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -656,10 +666,20 @@ int main(){
 		return 0;
 	}
 	
-	//Vincula o socket a porta 10048
+	//Perguntando a porta para estabelecer a conexao.
+	while(true){
+		printf("Type the port to connect: ");
+		getline(cin, port);
+		if(verifyPort(port)){
+			printf("Invalid Port\n");
+		}
+		else break;
+	}
+	
+	//Vincula o socket a porta especificada 
 	SocketAddress.sin_family = AF_INET;
 	SocketAddress.sin_addr.s_addr = INADDR_ANY;
-	SocketAddress.sin_port = htons(1048);
+	SocketAddress.sin_port = htons(stoi(port));
 	
 	//Se falhar, retorna
 	if(bind(NewServer, (struct sockaddr*)&SocketAddress, sizeof SocketAddress) == -1){

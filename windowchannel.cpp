@@ -8,26 +8,34 @@
 #include <iostream>
 #include <csignal>
 #include <string>
-#define DEBUG1 0
 using namespace std;
 
 //Este codigo ira mostar apenas as mensagens de um canal especifico.
 
-int main(){
+void handler(int sig) {
+    signal(SIGINT, handler);
+    fflush(stdout);
+}
 
+int main(){
+	
+	signal(SIGINT, handler);
+		
 	int NewSocket;
 	struct sockaddr_in ServerAddress;
 	char buffer[2050];
 	char r[2050];
+	string ip;
+	int port;
 	
 	NewSocket = socket(AF_INET, SOCK_STREAM, 0);
 	
+	cin >> ip >> port;
+	
 	ServerAddress.sin_family = AF_INET;
-	ServerAddress.sin_port = htons(1048);
-	//ServerAddress.sin_addr.s_addr = inet_addr("159.89.214.31");	
-	ServerAddress.sin_addr.s_addr = inet_addr("187.7.183.130");	
-	
-	
+	ServerAddress.sin_port = htons(port);
+	ServerAddress.sin_addr.s_addr = inet_addr(ip.c_str());	
+
 	//Conectando ao servidor.
 	int retConnect = connect(NewSocket, (struct sockaddr*)&ServerAddress, sizeof ServerAddress);
 	if(retConnect < 0){
@@ -40,6 +48,8 @@ int main(){
 	
 	//Printando a mensagem de boas vindas.
 	printf("%s", buffer);
+	
+	printf("***All the messages are going to shown in this terminal !!***\n");
 	
 	while(true){
 		//Limpando o buffer.
