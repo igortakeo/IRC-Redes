@@ -22,7 +22,7 @@ Internet Relay Chat implementado em C++ para a disciplina de Redes de Computador
 > **OBS: Abra outro terminal para rodar o cliente caso esteja na mesma máquina em que o servidor foi iniciado**.
 
 ## Como usar
-Rodando o servidor será pedido uma porta para a conexão, se a conexão for bem sucedida será mostrada a mensagem "Open Server", se não será mostrada "Bind Failed".
+Rodando o servidor será pedido uma porta para a conexão, se a conexão for bem sucedida será mostrada a mensagem "Open Server", se não, será mostrada "Bind Failed".
 Caso queira fazer port-forwarding o cliente irá pedir o IP e a porta para a conexão. Já se quiser fazer uma conexão localhost use o **IP: 127.0.0.1** e a mesma porta usada para estabelecer a conexão do servidor.
 
 Após a conexão com o canal de comunicação será aberto outro terminal, para mostrar as mensagens dos clientes que estão conectados ao canal.
@@ -52,4 +52,5 @@ Disposição dos terminais para melhor uso do programa e exemplo de uma conxeão
 
 ## Sobre
 > Versão Linux: Ubuntu 20.04 LTS
+
 > Compilador: gcc version 9.3.0(Ubuntu 9.3.0-10ubuntu2)
