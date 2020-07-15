@@ -33,4 +33,4 @@ Todos os canais seguem a mesma regra para o nome **#(Número)** (Por exemplo: #0
 
 Disposição dos terminais para melhor uso do programa e exemplo de uma conxeão do cliente.
 
-img <src="img/redes-img-0.png">
+img <src="tree/master/img/redes-img-0.png">
