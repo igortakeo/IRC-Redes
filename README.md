@@ -7,7 +7,7 @@ Internet Relay Chat implementado em C++ para a disciplina de Redes de Computador
 - Guilherme Targon Marques Barcellos / Número USP: 10724181
 
 ## Comandos para compilar e rodar no Terminal Linux.
-- git clone https://github.com/igortakeo/Redes.git
+- git clone https://github.com/igortakeo/IRC-Redes.git
 
 - cd IRC-Redes/ (Para entrar na pasta que contém os arquivos).
 
@@ -30,3 +30,7 @@ Após a conexão com o canal de comunicação será aberto outro terminal, para 
 Todos as mensagens devem ser escritas no terminal do cliente, o terminal do canal mencionado anteriormente só irá mostrar as mensagens.
 
 Todos os canais seguem a mesma regra para o nome **#(Número)** (Por exemplo: #0 e #55).
+
+Disposição dos terminais para melhor uso do programa e exemplo de uma conxeão do cliente.
+
+img <src="img/redes-img-0.png">
