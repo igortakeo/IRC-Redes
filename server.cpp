@@ -127,7 +127,6 @@ map<int, Channel>IdChannel;
 
 int NewServer;
 
-
 void handler(int sig) {
     signal(SIGINT, handler);
 	cout << "\t\rTo close server, use: Ctrl+D" << endl;
@@ -140,6 +139,31 @@ bool checkChannel(int id){
 	if(SetChannels.count(id) == 0) return false;
 	return true;
 }
+
+void ErasefromChannel(int id, Channel channel){
+	
+	//Apagando do map de ips a dupla id/ip.
+	channel.UsersIp.erase(id);
+	
+	//Apagando o id do vector do canal.
+	for(int i=0; i<channel.UsersChannel.size(); i++){
+		if(id == channel.UsersChannel[i]){
+			channel.UsersChannel.erase(channel.UsersChannel.begin()+i);
+			break;
+		}
+	} 
+	
+	//Diminuindo o numero de pessoas no canal.
+	channel.number--;
+	
+	//Caso o canal tenha zero clientes, ele e excluido.
+	if(channel.number == 0){
+		SetChannels.erase(channel.idChannel);
+		IdChannel.erase(channel.idChannel);	
+	}
+	
+}
+
 
 void ClientQuit(int id){
 
@@ -183,10 +207,14 @@ void ClientQuit(int id){
 	//Diminuindo o numero de pessoas no canal.
 	IdChannel[ConnectedChannel[id]].number--;
 	
+	//Caso o canal tenha zero clientes, ele e excluido.
 	if(IdChannel[ConnectedChannel[id]].number == 0){
-		SetChannels.erase(ConnectedChannel[id]);	
+		SetChannels.erase(ConnectedChannel[id]);
+		IdChannel.erase(ConnectedChannel[id]);	
 	}
 	
+	//Apagando do map id/id_channel.
+	ConnectedChannel.erase(id);
 }
 
 //Enviando mensagens para todos os clientes
@@ -231,7 +259,7 @@ void ThreadMessageClients(int id){
 		else if(strcmp(buffer, "/ping") == 0){
 			string pong = "pong";
 			printf("Sending pong to %s\n", Clients[id].c_str());
-			send(id, pong.c_str(), pong.size(), 0); 	
+			send(ChannelSocket[id], pong.c_str(), pong.size(), 0); 	
 			continue;
 		}
 		else if(strcmp(buffer, "/quit") == 0){
@@ -243,14 +271,15 @@ void ThreadMessageClients(int id){
 		//Verificando os comandos do admin.
 		else if(buffer[0] == '/'){
 	
-			string message = "", user = ""; 
+			string message = "", user = "", joinchannel = "", numberchannel = ""; 
 			string messageError = "You no are admin !";
 			string messageErrorUserExist = "User not exist";
 			string messageErrorUserChannel = "User not belongs in this channel";
 			string messageErrorNickname = "Nickname is same";
 			string messageErrorNicknameExist = "Nickname already exist";
 			string messageNicknameChanged = "Nickame was changed";
-			
+			string messageErrorJoinChannel = "Error !!";
+		
 			int i = 0;
 			
 			for(i=0; i<strlen(buffer); i++){
@@ -259,6 +288,71 @@ void ThreadMessageClients(int id){
 			}
 			
 			for(i=i+1; i<strlen(buffer); i++) user+=buffer[i];
+			
+			joinchannel.append(buffer, buffer+strlen(buffer));
+			
+			if(joinchannel.size() > 7 and joinchannel.substr(0,5) == "/join" and joinchannel[6] == '#' and joinchannel[5] == ' '){
+				Channel c;
+				numberchannel = joinchannel.substr(7);
+				
+				bool flagError = false, flagAdmin = false;
+				
+				//Verificando se existe algum caractere diferente de numero na string numberchannel. 
+				for(int i=0; i<(int)numberchannel.size(); i++){
+					if((int)numberchannel[i] < 48 or (int)numberchannel[i] > 57){
+						flagError = true;
+						break;
+					}
+				}
+			
+				if(flagError){
+					send(ChannelSocket[id], messageErrorJoinChannel.c_str(), messageErrorJoinChannel.size(), 0);
+					continue;
+				}
+				
+				int channel_change = stoi(numberchannel);
+				
+				if(ConnectedChannel[id] == channel_change){
+					send(ChannelSocket[id], messageErrorJoinChannel.c_str(), messageErrorJoinChannel.size(), 0);
+					continue;
+				}
+				
+				if(checkChannel(channel_change)){
+					c = IdChannel[channel_change];
+					c.UsersChannel.push_back(id);
+					c.number++;
+					c.UsersIp[id] = IdChannel[ConnectedChannel[id]].UsersIp[id];
+					ErasefromChannel(id, IdChannel[ConnectedChannel[id]]);
+					ConnectedChannel[id] = channel_change;
+					IdChannel[channel_change] = c;
+				}
+				else{
+					c.idChannel = channel_change;	
+					c.idAdmin = id;
+					c.number = 1;
+					c.UsersChannel.push_back(id);
+					c.UsersIp[id] = IdChannel[ConnectedChannel[id]].UsersIp[id];
+					ErasefromChannel(id, IdChannel[ConnectedChannel[id]]);
+					ConnectedChannel[id] = channel_change;
+					SetChannels.insert(channel_change);
+					IdChannel[channel_change] = c;
+					flagAdmin = true;
+				}
+				
+				string sendMessageWelcome = "-------------------------------------------------------\n";
+				sendMessageWelcome +=  "Welcome to Channel #";
+				sendMessageWelcome+= numberchannel;
+				if(flagAdmin) sendMessageWelcome += "\nYou are admin this channel !!\n";
+				
+				//Mandando a mensagem de boas vindas ao canal.
+				send(ChannelSocket[id], sendMessageWelcome.c_str(), sendMessageWelcome.size(), 0);
+				
+				
+				//Informando que o usuario conectou-se ao server.
+				cout << Clients[id]  << " joined the channel #" << channel_change << endl;
+
+				continue;
+			}	
 				
 			if(message == "/whois"){
 				if(id != IdChannel[ConnectedChannel[id]].idAdmin){
@@ -342,9 +436,9 @@ void ThreadMessageClients(int id){
 					send(ChannelSocket[id], messageNicknameChanged.c_str(), messageNicknameChanged.size(), 0);
 				}
 				
+				continue;
 			}	
 			
-			continue;
 		}
 		
 		if(IdChannel[ConnectedChannel[id]].UsersMute[id]){
@@ -521,7 +615,6 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 			else if(message.size() > 7 and message.substr(0,5) == "/join" and message[6] == '#' and message[5] == ' '){
 				Channel c;
 				rest = message.substr(7);
-				//Transformando o numero do canal em int.
 				
 				bool flagError = false;
 				
@@ -538,10 +631,11 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 					continue;
 				}
 				
+				//Transformando o numero do canal em int.
 				channel = stoi(rest);
 					
 				if(checkChannel(channel)){
-				    c = IdChannel[channel];
+				    c = IdChannel[channel];				
 					c.UsersChannel.push_back(NewClient);
 					c.number++;
 					c.UsersIp[NewClient] = ip;

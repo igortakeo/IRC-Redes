@@ -46,10 +46,10 @@ int main(){
 	//Lendo a mensagem de boas vindas.
 	read(NewSocket, buffer, sizeof buffer);
 	
-	//Printando a mensagem de boas vindas.
-	printf("%s", buffer);
-	
 	printf("***All the messages are going to shown in this terminal !!***\n");
+	
+	//Printando a mensagem de boas vindas.
+	printf("%s\n", buffer);
 	
 	while(true){
 		//Limpando o buffer.
@@ -57,6 +57,10 @@ int main(){
 		
 		//Lendo a mensagem enviada do servidor,
 		int ret = read(NewSocket, r, sizeof r);
+		
+		if(strcmp(r, "/join") == 0){
+			continue;
+		}
 		
 		//Verificando se é alguma palavra chave para desconectar.
 		if(ret <= 0 or strcmp(r, "/disconnect") == 0 or strcmp(r, "/quit") == 0) break;	
