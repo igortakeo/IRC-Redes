@@ -27,7 +27,7 @@ Caso queira fazer port-forwarding o cliente irá pedir o IP e a porta para a con
 
 Após a conexão com o canal de comunicação será aberto outro terminal, para mostrar as mensagens dos clientes que estão conectados ao canal.
 
-Todos as mensagens devem ser escritas no terminal do cliente, o terminal do canal mencionado anteriormente só irá mostrar as mensagens.
+Todas as mensagens devem ser escritas no terminal do cliente, o terminal do canal mencionado anteriormente só irá mostrar as mensagens.
 
 Para fechar a conexão basta digitar **/quit** ou usar o comando **CTRL + D**
 
