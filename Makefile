@@ -9,4 +9,4 @@ runc:
 	./client
 
 clean:
-	rm server client windowchannel	
+	rm server client windowchannel saveIPaddress.txt	

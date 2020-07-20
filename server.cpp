@@ -16,6 +16,9 @@
 #include <algorithm>
 using namespace std;
 
+struct sockaddr_in SocketAddress;
+int addrlen;
+
 //Declaracoes das funcoes.
 void handler(int sig);
 void ClientQuit(int id);
@@ -23,8 +26,9 @@ bool checkChannel(int id);
 void SendMessages(string buffer, int channel);
 void ThreadMessageClients(int id);
 void MessageClients();
-void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen);
+void AcceptClient(int NewServer);
 void MessagesStdin();
+bool ChooseChannel(int NewClient, string nick , string ip, int flag);
 
 //O map Clients armazena a dupla id do cliente e o seu nickname.
 map<int, string>Clients; 
@@ -44,6 +48,7 @@ queue<int>QueueClients;
 //O map guarda o idClient e seu idWindowChannel.
 map<int, int>ChannelSocket;
 
+map<int, string>IPAux;
 
 class Channel{
 	
@@ -78,10 +83,9 @@ class Channel{
 			send(ChannelSocket[id], errorAdmin.c_str(), errorAdmin.size(), 0);		
 		}
 		else{ 
-			string messageDisconnect = "/disconnect";
+			string messageDisconnect = "\nYou was kicked !!\n-------------------------------------------------------------------\n";
 			send(id, messageDisconnect.c_str(), messageDisconnect.size(), 0);
 			send(ChannelSocket[id], messageDisconnect.c_str(), messageDisconnect.size(), 0);
-			ClientQuit(id);
 		}	
 	}
 	
@@ -162,8 +166,12 @@ void ErasefromChannel(int id, Channel channel){
 		IdChannel.erase(channel.idChannel);	
 	}
 	
+	//Cliente sem canal.
+	ConnectedChannel[id] = -1;
+	
+	//Atualizando o canal no map.
+	IdChannel[channel.idChannel] = channel;
 }
-
 
 void ClientQuit(int id){
 
@@ -254,6 +262,14 @@ void ThreadMessageClients(int id){
 
 		//Recebe a mensagem enviada pelo cliente
 		int ret  = read(id, buffer, sizeof buffer); 
+		
+		
+		if(ConnectedChannel[id] == -1 and strcmp(buffer, "/choosechannel") == 0){
+				thread ChooseCh(ChooseChannel, id, Clients[id], IPAux[id], 0);
+				ChooseCh.join();
+				IPAux.erase(id);
+				continue;
+		}
 		
 		if(ret <= 0) break;
 		else if(strcmp(buffer, "/ping") == 0){
@@ -380,7 +396,9 @@ void ThreadMessageClients(int id){
 					if(Nicknames.count(user) != 0){	
 						int idUser = ClientsReverse[user];
 						if(count(IdChannel[ConnectedChannel[id]].UsersChannel.begin(),IdChannel[ConnectedChannel[id]].UsersChannel.end(),idUser) == 1){
+							IPAux[idUser] = IdChannel[ConnectedChannel[id]].UsersIp[idUser];
 							IdChannel[ConnectedChannel[id]].kick(idUser);
+							ErasefromChannel(idUser, IdChannel[ConnectedChannel[idUser]]);
 						}
 						else send(ChannelSocket[id], messageErrorUserChannel.c_str(), messageErrorUserChannel.size(), 0);
 					}
@@ -470,16 +488,148 @@ void MessageClients(){
 	}
 }
 
-void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
+bool ChooseChannel(int NewClient, string nick, string  ip, int flag){
+
+		char message_errorchannel[50] = "Error, type again\n";
+		char message_welcomechannel[50] = "Welcome to Channel #";
+		char message_welcomeclient[50] = "Welcome\nType the messages below:\n"; 
+		char message_emtpychannel[50] = "List empty !\n"; 
+		char message_joinchannel[200] = "Choose one channel to join\n(/list: channels list that already exist)\n(/join '#numberchannel': to join one channel)\n";
+		char buffer[2050];
+		
+			
+		//Envia a mensagem para a escolha de um canal.
+		send(NewClient, message_joinchannel, strlen(message_joinchannel), 0);
+
+		string message, rest;
+		int channel;
+		bool flagAdmin = false;
+		
+		while(true){
+			
+			//Limpando as strings.	
+			message.clear();
+			rest.clear();
+				
+			//Zera o buffer.
+			memset(buffer, 0, sizeof buffer);
+			
+			//Lendo a mensagem do cliente.
+			int ret = read(NewClient, buffer, sizeof buffer);	
+			
+			//Transformando para std::string.
+			message.append(buffer, buffer+strlen(buffer));
+			
+			//Verificando se o cliente deu sinal de eof.
+			if(message == "/quit"){
+				//Informando que o usuario desconectou.
+				cout << nick << " disconnected from server" << endl; 
+				return  false;
+			}
+			
+			//Verificando se o cliente pediu para ver a lista de canais.
+			else if(message == "/list"){
+				
+				//Verificando se a lista esta vazia.
+				if(SetChannels.empty()) 
+					send(NewClient, message_emtpychannel, strlen(message_emtpychannel), 0);	
+				else{
+					string sendList = "";
+					
+					//Pegando a lista de canais.
+					for(auto c : SetChannels){
+						sendList += "Channel: #"+to_string(IdChannel[c].idChannel)+" -- Users Online: "+to_string(IdChannel[c].number)+'\n';
+					}
+					//Enviando a lista de canais para o cliente.	
+					send(NewClient, sendList.c_str(), sendList.size(), 0);
+				}	
+			}
+			
+			else if(message.size() > 7 and message.substr(0,5) == "/join" and message[6] == '#' and message[5] == ' '){
+				Channel c;
+				rest = message.substr(7);
+				
+				bool flagError = false;
+				
+				//Verificando se existe algum caractere diferente de número na string rest. 
+				for(int i=0; i<(int)rest.size(); i++){
+					if((int)rest[i] < 48 or (int)rest[i] > 57){
+						flagError = true;
+						break;
+					}
+				}
+			
+				if(flagError){
+					send(NewClient, message_errorchannel, strlen(message_errorchannel), 0);
+					continue;
+				}
+				
+				//Transformando o numero do canal em int.
+				channel = stoi(rest);
+					
+				if(checkChannel(channel)){
+				    c = IdChannel[channel];				
+					c.UsersChannel.push_back(NewClient);
+					c.number++;
+					c.UsersIp[NewClient] = ip;
+					ConnectedChannel[NewClient] = channel;
+					IdChannel[channel] = c;
+				}
+				else{	
+					c.idChannel = channel;
+					c.idAdmin = NewClient;
+					c.number = 1;
+					c.UsersChannel.push_back(NewClient);
+					c.UsersIp[NewClient] = ip;		
+					ConnectedChannel[NewClient] = channel;
+					SetChannels.insert(channel);
+					IdChannel[channel] = c;
+					flagAdmin = true;
+				}
+				
+				if(flag){		
+					//Abrindo um terminal para mostrar as mensagens do canal.
+					system("gnome-terminal -e 'sh -c \"./windowchannel < saveIPaddress.txt\"' > /dev/null 2>&1");
+					//system("rm saveIPaddress.txt");
+					
+					//Aceita o canal.
+					int NewWindowChannel = accept(NewServer, (struct sockaddr*)&SocketAddress, (socklen_t*)&addrlen);
+					
+					//Relacionando o idClient com o seu idWindowChannel.
+					ChannelSocket[NewClient] = NewWindowChannel;
+				}
+				
+				string sendMessageWelcome;
+				
+				sendMessageWelcome.append(message_welcomechannel, message_welcomechannel+strlen(message_welcomechannel));
+				
+				sendMessageWelcome+=rest + '\n';
+				
+				if(flagAdmin) sendMessageWelcome += "You are admin this channel !!\n";
+				
+				//Mandando a mensagem de boas vindas ao canal.
+				send(ChannelSocket[NewClient], sendMessageWelcome.c_str(), sendMessageWelcome.size(), 0);
+				send(NewClient, message_welcomeclient, strlen(message_welcomeclient), 0);
+
+				break;
+			}
+			else 
+				send(NewClient, message_errorchannel, strlen(message_errorchannel), 0);	
+		}
+		
+		//Informando que o usuario conectou-se ao server.
+		cout << nick << " joined the channel #" << channel << endl;		
+		
+		return true;
+		
+}
+
+void AcceptClient(int NewServer){
+	
 	char message_welcome[150] = "Welcome to server\nInsert your Nickname(less or equal 50 characters ASCII): ";
-	char message_joinchannel[200] = "Choose one channel to join\n(/list: channels list that already exist)\n(/join '#numberchannel': to join one channel)\n";
 	char message_accept[50] = "Nickname accepted";
 	char message_error_nickame[150] = "Nickname already exist\nInsert your Nickname(less or equal 50 characters ASCII): ";
-	char message_emtpychannel[50] = "List empty !\n"; 
-	char message_welcomechannel[50] = "Welcome to Channel #";
-	char message_errorchannel[50] = "Error, type again\n";
 	char message_nicklarge[150] = "Nickname too large, type again\nInsert your Nickname(less or equal 50 characters ASCII): ";
-	char message_welcomeclient[50] = "Welcome"; 
 	char buffer[2050];
 	string ip;
 	
@@ -559,134 +709,16 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 		
 		//Printando a mensagem.
 		printf("%s", buffer);
-			
-		//Envia a mensagem para a escolha de um canal.
-		send(NewClient, message_joinchannel, strlen(message_joinchannel), 0);
 		
 		//Pegando ip do cliente
 		getpeername(NewClient, (struct sockaddr*)&SocketAddressClient, (socklen_t*)&addrlenClient);
 		ip = inet_ntoa(SocketAddressClient.sin_addr);
 		
-		string message, rest;
-		int channel;
-		bool flagAdmin = false;
-		
-		while(true){
-			
-			//Limpando as strings.	
-			message.clear();
-			rest.clear();
-				
-			//Zera o buffer.
-			memset(buffer, 0, sizeof buffer);
-			
-			//Lendo a mensagem do cliente.
-			int ret = read(NewClient, buffer, sizeof buffer);	
-			
-			//Transformando para std::string.
-			message.append(buffer, buffer+strlen(buffer));
-			
-			//Verificando se o cliente deu sinal de eof.
-			if(message == "/quit"){
-				//Informando que o usuario desconectou.
-				cout << nick << " disconnected from server" << endl; 
-				flagEOF = true;	
-				break;
-			}
-			
-			//Verificando se o cliente pediu para ver a lista de canais.
-			else if(message == "/list"){
-				
-				//Verificando se a lista esta vazia.
-				if(SetChannels.empty()) 
-					send(NewClient, message_emtpychannel, strlen(message_emtpychannel), 0);	
-				else{
-					string sendList = "";
-					
-					//Pegando a lista de canais.
-					for(auto c : SetChannels){
-						sendList += "Channel: #"+to_string(IdChannel[c].idChannel)+" -- Users Online: "+to_string(IdChannel[c].number)+'\n';
-					}
-					//Enviando a lista de canais para o cliente.	
-					send(NewClient, sendList.c_str(), sendList.size(), 0);
-				}	
-			}
-			
-			else if(message.size() > 7 and message.substr(0,5) == "/join" and message[6] == '#' and message[5] == ' '){
-				Channel c;
-				rest = message.substr(7);
-				
-				bool flagError = false;
-				
-				//Verificando se existe algum caractere diferente de número na string rest. 
-				for(int i=0; i<(int)rest.size(); i++){
-					if((int)rest[i] < 48 or (int)rest[i] > 57){
-						flagError = true;
-						break;
-					}
-				}
-			
-				if(flagError){
-					send(NewClient, message_errorchannel, strlen(message_errorchannel), 0);
-					continue;
-				}
-				
-				//Transformando o numero do canal em int.
-				channel = stoi(rest);
-					
-				if(checkChannel(channel)){
-				    c = IdChannel[channel];				
-					c.UsersChannel.push_back(NewClient);
-					c.number++;
-					c.UsersIp[NewClient] = ip;
-					ConnectedChannel[NewClient] = channel;
-					IdChannel[channel] = c;
-				}
-				else{	
-					c.idChannel = channel;
-					c.idAdmin = NewClient;
-					c.number = 1;
-					c.UsersChannel.push_back(NewClient);
-					c.UsersIp[NewClient] = ip;		
-					ConnectedChannel[NewClient] = channel;
-					SetChannels.insert(channel);
-					IdChannel[channel] = c;
-					flagAdmin = true;
-				}
-				
-				//Abrindo um terminal para mostrar as mensagens do canal.
-				system("gnome-terminal -e 'sh -c \"./windowchannel < saveIPaddress.txt\"' > /dev/null 2>&1");
-				system("rm saveIPaddress.txt");
-				
-				//Aceita o canal.
-				int NewWindowChannel = accept(NewServer, (struct sockaddr*)&SocketAddress, (socklen_t*)&addrlen);
-				
-				//Relacionando o idClient com o seu idWindowChannel.
-				ChannelSocket[NewClient] = NewWindowChannel;
-				
-				string sendMessageWelcome;
-				
-				sendMessageWelcome.append(message_welcomechannel, message_welcomechannel+strlen(message_welcomechannel));
-				
-				sendMessageWelcome+=rest + '\n';
-				
-				if(flagAdmin) sendMessageWelcome += "You are admin this channel !!\n";
-				
-				//Mandando a mensagem de boas vindas ao canal.
-				send(NewWindowChannel, sendMessageWelcome.c_str(), sendMessageWelcome.size(), 0);
-				send(NewClient, message_welcomeclient, strlen(message_welcomeclient), 0);
-				
-				break;
-			}
-			else 
-				send(NewClient, message_errorchannel, strlen(message_errorchannel), 0);
-			
-		}
+		flagEOF = ChooseChannel(NewClient, nick, ip, 1);
 		
 		//Verificando o sinal de EOF do cliente.
-		if(flagEOF) continue;
+		if(!flagEOF) continue;
 		
-	
 		//Relacionando o id do cliente com o seu nickname.
 		Clients[NewClient] = nick;
 		
@@ -699,11 +731,9 @@ void AcceptClient(int NewServer, struct sockaddr_in SocketAddress, int addrlen){
 		//Guardando no conjunto de nicks.
 		Nicknames.insert(nick);
 		
-		//Informando que o usuario conectou-se ao server.
-		cout << nick << " joined the channel #" << channel << endl;
-
 		//Inserindo o cliente na fila.
 		QueueClients.push(NewClient);	
+			
 	}
 	
 }
@@ -748,8 +778,7 @@ int main(){
 	
 	signal(SIGINT, handler);
 	
-	struct sockaddr_in SocketAddress;
-	int addrlen = sizeof SocketAddress;
+	addrlen = sizeof SocketAddress;
 	string port;
 	
 	//Cria um socket
@@ -790,7 +819,7 @@ int main(){
 		return 0;
 	}
 	
-	thread ThreadAccept(AcceptClient, NewServer, SocketAddress, addrlen);
+	thread ThreadAccept(AcceptClient, NewServer);
 	thread ThreadMessages(MessageClients);
 	thread ThreadMessagesStdin(MessagesStdin);
 	ThreadAccept.join();

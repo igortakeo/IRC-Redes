@@ -33,26 +33,75 @@ void handler(int sig) {
     fflush(stdout);
 }
 
+void ChooseChannelClient(int NewSocket){
+	char buffer[4096];
+	string message;
+	string  eofnick = "/quit";
+	
+	while(true){
+		
+		//Zera o buffer.
+		memset(buffer, 0, sizeof buffer);
+		
+		//Recebendo a mensagem do cliente.	
+		getline(cin, message);
+		
+		//Verificando se eh um sinal de EOF (Ctrl + D).
+		if(cin.eof() or message == "/quit"){
+			send(NewSocket, eofnick.c_str(), eofnick.size(), 0);
+			if(message != "/quit")printf("\n");
+			cout << "Bye!" << endl;
+			close(NewSocket);
+			exit(0);
+		}
+		
+		//Mandando a mensagem para o servidor.
+		send(NewSocket, message.c_str(), message.size(), 0);
+		
+		//Lendo a mensagem de validacao do servidor.	
+		read(NewSocket, buffer, sizeof buffer);
+		
+		string RetMessage;
+		
+		//Cortando a mensagem recebida pelo servidor.
+		RetMessage.append(buffer, buffer+strlen(buffer));
+		
+		//Verificando se foi possivel entrar no canal.
+		if(RetMessage == "Welcome") break;
+
+		//Printando a mensagem.
+		printf("%s", buffer);	
+	}
+}
+
 void ReceiveMessages(int NewSocket){
-
+	
 	char message[2050];
+	string message_channel = "/choosechannel";
 	memset(message, 0, sizeof message);
-
+	
 	while(true){
 		//Recebendo a mensagem do servidor
 		int receive = read(NewSocket, message, sizeof message);
-    	
+    
     	//Verificando a mensagen de fechamento do servidor
     	if(strcmp(message, "/disconnect") == 0){
-			printf("Server Closed\n");
+			printf("\nServer Closed\n");
 			printf("Bye!\n");		
 			close(NewSocket);
 			exit(0);
+			continue;
 		}
 		
     	//Printando a mensagem recebida
     	if (receive > 0){
       		printf("%s\n", message);
+		}
+		
+		if(strcmp(message,  "\nYou was kicked !!\n-------------------------------------------------------------------\n") == 0){
+				send(NewSocket, message_channel.c_str(), message_channel.size(), 0);
+				int receive = read(NewSocket, message, sizeof message);
+				printf("%s\n", message);
 		}
 		
     	else if (receive == 0){
@@ -64,7 +113,63 @@ void ReceiveMessages(int NewSocket){
   	}
 }
 
+void SendMessages(int NewSocket){
+	char buffer[4096];	
+	bool flag_barra_n= false;
 
+	while(true){
+		
+		//Limpando o buffer
+		memset(buffer, 0, sizeof buffer);
+		
+		//Caractere auxiliar
+		char c;
+		int i = 0;
+		
+		//Para sair com Ctrl+D
+		if(scanf("%c", &c) == EOF){
+			memset(buffer, 0, sizeof buffer);
+			flag_barra_n = true;
+			strcpy(buffer, "/quit");
+			c = '\n';
+		}
+		
+		while(c != '\n'){
+			
+			buffer[i] = c;	
+			
+			//Colocando os caracteres na mensagem de forma a limita-la a 2048 caracteres
+			i = (i+1)%2048;
+			if(strlen(buffer) == 2048){
+				//Enviando a mensagem
+				send(NewSocket, buffer, strlen(buffer), 0);
+				
+				//Limpando o buffer
+				memset(buffer, 0, sizeof buffer); 
+			}
+			//Para sair com Ctrl+D
+			if(scanf("%c", &c) == EOF){
+				memset(buffer, 0, sizeof buffer);
+				strcpy(buffer, "/quit");
+				printf("\n");
+				cout << "Bye!" << endl;
+				return;
+			}
+		}
+		
+		//Se o comando "/quit" for enviado, o programa deve encerrar
+		if(strcmp(buffer, "/quit") == 0){
+			send(NewSocket, buffer, strlen(buffer), 0);
+			if(flag_barra_n) printf("\n");
+			cout << "Bye!" << endl;
+			return;
+		}
+		
+		send(NewSocket, buffer, strlen(buffer), 0);
+				
+		memset(buffer, 0, sizeof buffer);
+	}	
+}
 
 int main(){
 	
@@ -74,9 +179,9 @@ int main(){
 	struct sockaddr_in ServerAddress;	
 	char buffer[4096];
 	int ret;
-	string nick, message, ip_connect, port;
+	string nick,  ip_connect, port;
 	string eofnick = "/quit";
-		
+
 	//Criando um socket
 	NewSocket = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -205,107 +310,18 @@ int main(){
 	//Zera o buffer
 	memset(buffer, 0, sizeof buffer);
 	
+	
 	//Lendo a mensagem pra escolha do canal
-	ret = read(NewSocket, buffer, sizeof buffer);
+	 read(NewSocket, buffer, sizeof buffer);
 	
 	//Printando a mensagem 
 	printf("%s", buffer);
 	
-	while(true){
-		
-		//Zera o buffer.
-		memset(buffer, 0, sizeof buffer);
-		
-		//Recebendo a mensagem do cliente.	
-		getline(cin, message);
-		
-		//Verificando se eh um sinal de EOF (Ctrl + D).
-		if(cin.eof() or message == "/quit"){
-			send(NewSocket, eofnick.c_str(), eofnick.size(), 0);
-			if(message != "/quit")printf("\n");
-			cout << "Bye!" << endl;
-			close(NewSocket);
-			return 0;
-		}
-		
-		//Mandando a mensagem para o servidor.
-		send(NewSocket, message.c_str(), message.size(), 0);
-		
-		//Lendo a mensagem de validacao do servidor.	
-		read(NewSocket, buffer, sizeof buffer);
-		
-		string RetMessage;
-		
-		//Cortando a mensagem recebida pelo servidor.
-		RetMessage.append(buffer, buffer+strlen(buffer));
-		
-		//Verificando se foi possivel entrar no canal.
-		if(RetMessage == "Welcome") break;
-
-		//Printando a mensagem.
-		printf("%s", buffer);
-		
-	}
-	
 	thread Receive(ReceiveMessages, NewSocket);
 	Receive.detach();
 	
-	bool flag_barra_n= false;
-
-	while(true){
-		
-		//Limpando o buffer
-		memset(buffer, 0, sizeof buffer);
-		
-		printf("Type the message: ");
-		
-		//Caractere auxiliar
-		char c;
-		int i = 0;
-		
-		//Para sair com Ctrl+D
-		if(scanf("%c", &c) == EOF){
-			memset(buffer, 0, sizeof buffer);
-			flag_barra_n = true;
-			strcpy(buffer, "/quit");
-			c = '\n';
-		}
-		
-		while(c != '\n'){
-			
-			buffer[i] = c;	
-			
-			//Colocando os caracteres na mensagem de forma a limita-la a 2048 caracteres
-			i = (i+1)%2048;
-			if(strlen(buffer) == 2048){
-				//Enviando a mensagem
-				send(NewSocket, buffer, strlen(buffer), 0);
-				
-				//Limpando o buffer
-				memset(buffer, 0, sizeof buffer); 
-			}
-			//Para sair com Ctrl+D
-			if(scanf("%c", &c) == EOF){
-				memset(buffer, 0, sizeof buffer);
-				strcpy(buffer, "/quit");
-				printf("\n");
-				cout << "Bye!" << endl;
-				break;
-			}
-		}
-		
-		//Se o comando "/quit" for enviado, o programa deve encerrar
-		if(strcmp(buffer, "/quit") == 0){
-			send(NewSocket, buffer, strlen(buffer), 0);
-			if(flag_barra_n) printf("\n");
-			cout << "Bye!" << endl;
-			break;
-		}
-		
-		send(NewSocket, buffer, strlen(buffer), 0);
-				
-		memset(buffer, 0, sizeof buffer);
-	}
+	thread SendMess(SendMessages, NewSocket);
+	SendMess.join();
 
 	//Fecha o socket
 	close(NewSocket); 
