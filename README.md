@@ -50,7 +50,7 @@ Disposição dos terminais para melhor uso do programa e exemplo de uma conxeão
 - /mute nickname - Impede que o usuário com o nickname especificado mande mensagem.
 - /unmute nickname - Retira o mute do usuário.
 - /whois nickname - Retorna o endereço de IP do usuário apenas para o adm do canal.
-- /invite nickname - Convida o usuário para participar do canal em que o admin faz parte. 
+- /invite nickname - Convida o usuário para participar do canal em que o admin faz parte (Funciona apenas para canais criados com a flag -i).
 
 ## Sobre
 > Versão Linux: Ubuntu 20.04 LTS
