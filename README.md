@@ -42,6 +42,7 @@ Disposição dos terminais para melhor uso do programa e exemplo de uma conxeão
 - /quit - O cliente fecha a conexão e fecha a aplicação.
 - /ping - O servidor retorna **pong** assim que receber a mensagem.
 - /join #(Número) - Entra no canal.
+- /join #(Número) -i - Cria um canal apenas para convidados.
 - /nickname ApelidoDesejado - Muda o nickname pelo apelido especificado.
 
 ## Comandos apenas para os administradores dos canais
@@ -49,6 +50,7 @@ Disposição dos terminais para melhor uso do programa e exemplo de uma conxeão
 - /mute nickname - Impede que o usuário com o nickname especificado mande mensagem.
 - /unmute nickname - Retira o mute do usuário.
 - /whois nickname - Retorna o endereço de IP do usuário apenas para o adm do canal.
+- /invite nickname - Convida o usuário para participar do canal em que o admin faz parte. 
 
 ## Sobre
 > Versão Linux: Ubuntu 20.04 LTS
