@@ -48,7 +48,14 @@ queue<int>QueueClients;
 //O map guarda o idClient e seu idWindowChannel.
 map<int, int>ChannelSocket;
 
+//Guarda o ip do cliente temporiaramente .
 map<int, string>IPAux;
+
+//O cliente tem um convite pendente.
+map<int, bool>PendingInvite;
+
+//Guarda a dupla id do cliente e o conjunto de id's que ele recebeu convite.
+map<int, queue<int>>WhoInvited;
 
 class Channel{
 	
@@ -56,6 +63,9 @@ class Channel{
 	
 	//Id do canal.
 	int idChannel;
+	
+	//Variavel booleana para verificar se o canal eh privado ou nao.
+	bool privateChannel;
 	
 	//Id do administador do canal.
 	int idAdmin;
@@ -115,6 +125,20 @@ class Channel{
 			send(ChannelSocket[idAdmin], messageMute.c_str(), messageMute.size(), 0);
 			send(ChannelSocket[id], messageNoErrorMuted.c_str(), messageNoErrorMuted.size(), 0);
 		}
+	}
+	
+	void invite(int id){
+		if(id  == idAdmin or !privateChannel){
+			string errorAdmin = "Error, command not allowed !!";
+			send(ChannelSocket[id], errorAdmin.c_str(), errorAdmin.size(), 0);		
+		}
+		else{	
+			string inviteUser = Clients[idAdmin] + " invited you participate of the channel #"+to_string(idChannel)+"(yes/no) ?";
+			send(ChannelSocket[id], inviteUser.c_str(), inviteUser.size(), 0);
+			PendingInvite[id] = true;
+			WhoInvited[id].push(idChannel);
+		}
+		
 	}
 			
 };
@@ -253,7 +277,8 @@ void SendMessages(string buffer, int channel){
 }
 
 void ThreadMessageClients(int id){
-
+	string messagePrivateChannel = "This channel is only for guests\n";
+	string messagePendingInvite = "Answer your pending invite";
 	char buffer[2050];	
 	
 	while(true){
@@ -263,12 +288,45 @@ void ThreadMessageClients(int id){
 		//Recebe a mensagem enviada pelo cliente
 		int ret  = read(id, buffer, sizeof buffer); 
 		
-		
 		if(ConnectedChannel[id] == -1 and strcmp(buffer, "/choosechannel") == 0){
 				thread ChooseCh(ChooseChannel, id, Clients[id], IPAux[id], 0);
 				ChooseCh.join();
 				IPAux.erase(id);
 				continue;
+		}
+		
+		if(PendingInvite[id]){
+			
+			if(strcmp(buffer, "yes") == 0){
+				Channel c = IdChannel[WhoInvited[id].front()];
+				c.UsersChannel.push_back(id);
+				c.number++;
+				c.UsersIp[id] = IdChannel[ConnectedChannel[id]].UsersIp[id];
+				ErasefromChannel(id, IdChannel[ConnectedChannel[id]]);
+				ConnectedChannel[id] = WhoInvited[id].front();
+				IdChannel[WhoInvited[id].front()] = c;
+			
+				WhoInvited[id].pop();
+				if(WhoInvited[id].empty())PendingInvite.erase(id);
+			
+				string sendMessageWelcome = "-------------------------------------------------------\n";
+				sendMessageWelcome +=  "Welcome to Channel #";
+				sendMessageWelcome += to_string(c.idChannel);
+				
+				//Mandando a mensagem de boas vindas ao canal.
+				send(ChannelSocket[id], sendMessageWelcome.c_str(), sendMessageWelcome.size(), 0);		
+			}
+			else if(strcmp(buffer, "no") == 0){
+				string messageThankYou = "Thank you";
+				WhoInvited[id].pop();
+				if(WhoInvited[id].empty()) PendingInvite.erase(id);
+				
+				send(ChannelSocket[id], messageThankYou.c_str(), messageThankYou.size(), 0);
+			}
+			else{
+				send(ChannelSocket[id], messagePendingInvite.c_str(), messagePendingInvite.size(), 0);
+			}
+			continue;
 		}
 		
 		if(ret <= 0) break;
@@ -291,6 +349,7 @@ void ThreadMessageClients(int id){
 			string messageError = "You no are admin !";
 			string messageErrorUserExist = "User not exist";
 			string messageErrorUserChannel = "User not belongs in this channel";
+			string messageErrorUserChannelBelong = "User belongs this channel";
 			string messageErrorNickname = "Nickname is same";
 			string messageErrorNicknameExist = "Nickname already exist";
 			string messageNicknameChanged = "Nickame was changed";
@@ -333,7 +392,7 @@ void ThreadMessageClients(int id){
 					continue;
 				}
 				
-				if(checkChannel(channel_change)){
+				if(checkChannel(channel_change) and !IdChannel[channel_change].privateChannel){
 					c = IdChannel[channel_change];
 					c.UsersChannel.push_back(id);
 					c.number++;
@@ -342,7 +401,7 @@ void ThreadMessageClients(int id){
 					ConnectedChannel[id] = channel_change;
 					IdChannel[channel_change] = c;
 				}
-				else{
+				else if(SetChannels.count(channel_change) == 0){
 					c.idChannel = channel_change;	
 					c.idAdmin = id;
 					c.number = 1;
@@ -354,7 +413,10 @@ void ThreadMessageClients(int id){
 					IdChannel[channel_change] = c;
 					flagAdmin = true;
 				}
-				
+				else{
+					send(ChannelSocket[id], messagePrivateChannel.c_str(), messagePrivateChannel.size(), 0);
+					continue;
+				}
 				string sendMessageWelcome = "-------------------------------------------------------\n";
 				sendMessageWelcome +=  "Welcome to Channel #";
 				sendMessageWelcome+= numberchannel;
@@ -362,7 +424,6 @@ void ThreadMessageClients(int id){
 				
 				//Mandando a mensagem de boas vindas ao canal.
 				send(ChannelSocket[id], sendMessageWelcome.c_str(), sendMessageWelcome.size(), 0);
-				
 				
 				//Informando que o usuario conectou-se ao server.
 				cout << Clients[id]  << " joined the channel #" << channel_change << endl;
@@ -455,8 +516,28 @@ void ThreadMessageClients(int id){
 				}
 				
 				continue;
+			}
+			else if(message == "/invite"){
+				if(!IdChannel[ConnectedChannel[id]].privateChannel){
+					send(ChannelSocket[id], messageErrorJoinChannel.c_str(), messageErrorJoinChannel.size(), 0);
+				}
+				else if(id != IdChannel[ConnectedChannel[id]].idAdmin){
+					send(ChannelSocket[id], messageError.c_str(), messageError.size(), 0);
+				}
+				else{
+					if(Nicknames.count(user) != 0){	
+						int idUser = ClientsReverse[user];
+						if(count(IdChannel[ConnectedChannel[id]].UsersChannel.begin(),IdChannel[ConnectedChannel[id]].UsersChannel.end(),idUser) == 0){
+							IdChannel[ConnectedChannel[id]].invite(idUser);
+							
+						}
+						else send(ChannelSocket[id], messageErrorUserChannelBelong.c_str(), messageErrorUserChannelBelong.size(), 0);
+					}
+					else send(ChannelSocket[id], messageErrorUserExist.c_str(), messageErrorUserExist.size(), 0); 
+					
+				}		
 			}	
-			
+			continue;
 		}
 		
 		if(IdChannel[ConnectedChannel[id]].UsersMute[id]){
@@ -495,9 +576,9 @@ bool ChooseChannel(int NewClient, string nick, string  ip, int flag){
 		char message_welcomeclient[50] = "Welcome\nType the messages below:\n"; 
 		char message_emtpychannel[50] = "List empty !\n"; 
 		char message_joinchannel[200] = "Choose one channel to join\n(/list: channels list that already exist)\n(/join '#numberchannel': to join one channel)\n";
+		char message_privatechannel[200] = "This channel is only for guests\n";
 		char buffer[2050];
 		
-			
 		//Envia a mensagem para a escolha de um canal.
 		send(NewClient, message_joinchannel, strlen(message_joinchannel), 0);
 
@@ -538,7 +619,9 @@ bool ChooseChannel(int NewClient, string nick, string  ip, int flag){
 					
 					//Pegando a lista de canais.
 					for(auto c : SetChannels){
-						sendList += "Channel: #"+to_string(IdChannel[c].idChannel)+" -- Users Online: "+to_string(IdChannel[c].number)+'\n';
+						sendList += "Channel";
+						if(IdChannel[c].privateChannel) sendList += " (Invite-only)";
+						sendList += ": #"+to_string(IdChannel[c].idChannel)+" -- Users Online: "+to_string(IdChannel[c].number)+'\n';
 					}
 					//Enviando a lista de canais para o cliente.	
 					send(NewClient, sendList.c_str(), sendList.size(), 0);
@@ -548,26 +631,53 @@ bool ChooseChannel(int NewClient, string nick, string  ip, int flag){
 			else if(message.size() > 7 and message.substr(0,5) == "/join" and message[6] == '#' and message[5] == ' '){
 				Channel c;
 				rest = message.substr(7);
-				
-				bool flagError = false;
-				
+				string stringflagPrivate = "";
+				int j = rest.size(), sz = 0;
+				bool flagError = false, flagPrivate = false;
+		
 				//Verificando se existe algum caractere diferente de número na string rest. 
 				for(int i=0; i<(int)rest.size(); i++){
+					if(rest[i] == ' '){
+						j = i +1;       
+						break;			
+					}
 					if((int)rest[i] < 48 or (int)rest[i] > 57){
 						flagError = true;
 						break;
 					}
+					else sz++;
 				}
-			
+				
+				
 				if(flagError){
 					send(NewClient, message_errorchannel, strlen(message_errorchannel), 0);
 					continue;
 				}
 				
+				if( j < (int)rest.size()){
+					stringflagPrivate = rest.substr(j);
+					if(stringflagPrivate == "-i"){
+						flagPrivate = true;
+					}
+					else{
+						send(NewClient, message_errorchannel, strlen(message_errorchannel), 0);
+						continue;
+					}
+				}
+				
 				//Transformando o numero do canal em int.
 				channel = stoi(rest);
-					
+				
+				if(checkChannel(channel) and IdChannel[channel].privateChannel){
+						send(NewClient, message_privatechannel, strlen(message_privatechannel), 0);
+						continue;
+				}
+						
 				if(checkChannel(channel)){
+					if(flagPrivate){
+						send(NewClient, message_privatechannel, strlen(message_privatechannel), 0);
+						continue;
+					}
 				    c = IdChannel[channel];				
 					c.UsersChannel.push_back(NewClient);
 					c.number++;
@@ -576,6 +686,7 @@ bool ChooseChannel(int NewClient, string nick, string  ip, int flag){
 					IdChannel[channel] = c;
 				}
 				else{	
+					if(flagPrivate) c.privateChannel = true;
 					c.idChannel = channel;
 					c.idAdmin = NewClient;
 					c.number = 1;
@@ -603,7 +714,7 @@ bool ChooseChannel(int NewClient, string nick, string  ip, int flag){
 				
 				sendMessageWelcome.append(message_welcomechannel, message_welcomechannel+strlen(message_welcomechannel));
 				
-				sendMessageWelcome+=rest + '\n';
+				sendMessageWelcome+=rest.substr(0, sz) + '\n';
 				
 				if(flagAdmin) sendMessageWelcome += "You are admin this channel !!\n";
 				
