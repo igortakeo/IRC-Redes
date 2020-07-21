@@ -14,10 +14,12 @@
 #include <csignal>
 #include <string>
 #include <algorithm>
+#include <mutex>
 using namespace std;
 
 struct sockaddr_in SocketAddress;
 int addrlen;
+mutex m;
 
 //Declaracoes das funcoes.
 void handler(int sig);
@@ -313,6 +315,8 @@ void ThreadMessageClients(int id){
 				sendMessageWelcome +=  "Welcome to Channel #";
 				sendMessageWelcome += to_string(c.idChannel);
 				
+				cout << Clients[id] << " joined the channel #" << c.idChannel << endl;
+				
 				//Mandando a mensagem de boas vindas ao canal.
 				send(ChannelSocket[id], sendMessageWelcome.c_str(), sendMessageWelcome.size(), 0);		
 			}
@@ -354,7 +358,9 @@ void ThreadMessageClients(int id){
 			string messageErrorNicknameExist = "Nickname already exist";
 			string messageNicknameChanged = "Nickame was changed";
 			string messageErrorJoinChannel = "Error !!";
-		
+			string messagePrivateChannel = "This is channel is invite only !!";
+			string messageNotPrivateChannel = "This is channel not is invite only !!";
+			
 			int i = 0;
 			
 			for(i=0; i<strlen(buffer); i++){
@@ -529,15 +535,33 @@ void ThreadMessageClients(int id){
 						int idUser = ClientsReverse[user];
 						if(count(IdChannel[ConnectedChannel[id]].UsersChannel.begin(),IdChannel[ConnectedChannel[id]].UsersChannel.end(),idUser) == 0){
 							IdChannel[ConnectedChannel[id]].invite(idUser);
-							
 						}
 						else send(ChannelSocket[id], messageErrorUserChannelBelong.c_str(), messageErrorUserChannelBelong.size(), 0);
 					}
 					else send(ChannelSocket[id], messageErrorUserExist.c_str(), messageErrorUserExist.size(), 0); 
 					
 				}		
+				continue;
+			}
+			else if(message == "/mode"){
+				if(id != IdChannel[ConnectedChannel[id]].idAdmin){
+					send(ChannelSocket[id], messageError.c_str(), messageError.size(), 0);		
+				}
+				else{
+						if(user == "+i"){
+							IdChannel[ConnectedChannel[id]].privateChannel = true;
+							send(ChannelSocket[id], messagePrivateChannel.c_str(), messagePrivateChannel.size(), 0);
+						}
+						else if(user == "-i"){
+							IdChannel[ConnectedChannel[id]].privateChannel = false;
+							send(ChannelSocket[id], messageNotPrivateChannel.c_str(), messageNotPrivateChannel.size(), 0);
+						}
+						else{
+							send(ChannelSocket[id], messageErrorJoinChannel.c_str(), messageErrorJoinChannel.size(), 0);
+						}	
+				}
+				continue;
 			}	
-			continue;
 		}
 		
 		if(IdChannel[ConnectedChannel[id]].UsersMute[id]){
@@ -570,7 +594,7 @@ void MessageClients(){
 }
 
 bool ChooseChannel(int NewClient, string nick, string  ip, int flag){
-
+		m.lock();
 		char message_errorchannel[50] = "Error, type again\n";
 		char message_welcomechannel[50] = "Welcome to Channel #";
 		char message_welcomeclient[50] = "Welcome\nType the messages below:\n"; 
@@ -604,6 +628,9 @@ bool ChooseChannel(int NewClient, string nick, string  ip, int flag){
 			//Verificando se o cliente deu sinal de eof.
 			if(message == "/quit"){
 				//Informando que o usuario desconectou.
+				if(ChannelSocket[NewClient] != -1){
+					send(ChannelSocket[NewClient], message.c_str(), message.size(), 0);
+				}
 				cout << nick << " disconnected from server" << endl; 
 				return  false;
 			}
@@ -633,14 +660,10 @@ bool ChooseChannel(int NewClient, string nick, string  ip, int flag){
 				rest = message.substr(7);
 				string stringflagPrivate = "";
 				int j = rest.size(), sz = 0;
-				bool flagError = false, flagPrivate = false;
+				bool flagError = false;
 		
 				//Verificando se existe algum caractere diferente de número na string rest. 
 				for(int i=0; i<(int)rest.size(); i++){
-					if(rest[i] == ' '){
-						j = i +1;       
-						break;			
-					}
 					if((int)rest[i] < 48 or (int)rest[i] > 57){
 						flagError = true;
 						break;
@@ -654,17 +677,6 @@ bool ChooseChannel(int NewClient, string nick, string  ip, int flag){
 					continue;
 				}
 				
-				if( j < (int)rest.size()){
-					stringflagPrivate = rest.substr(j);
-					if(stringflagPrivate == "-i"){
-						flagPrivate = true;
-					}
-					else{
-						send(NewClient, message_errorchannel, strlen(message_errorchannel), 0);
-						continue;
-					}
-				}
-				
 				//Transformando o numero do canal em int.
 				channel = stoi(rest);
 				
@@ -674,10 +686,6 @@ bool ChooseChannel(int NewClient, string nick, string  ip, int flag){
 				}
 						
 				if(checkChannel(channel)){
-					if(flagPrivate){
-						send(NewClient, message_privatechannel, strlen(message_privatechannel), 0);
-						continue;
-					}
 				    c = IdChannel[channel];				
 					c.UsersChannel.push_back(NewClient);
 					c.number++;
@@ -686,7 +694,6 @@ bool ChooseChannel(int NewClient, string nick, string  ip, int flag){
 					IdChannel[channel] = c;
 				}
 				else{	
-					if(flagPrivate) c.privateChannel = true;
 					c.idChannel = channel;
 					c.idAdmin = NewClient;
 					c.number = 1;
@@ -701,7 +708,6 @@ bool ChooseChannel(int NewClient, string nick, string  ip, int flag){
 				if(flag){		
 					//Abrindo um terminal para mostrar as mensagens do canal.
 					system("gnome-terminal -e 'sh -c \"./windowchannel < saveIPaddress.txt\"' > /dev/null 2>&1");
-					//system("rm saveIPaddress.txt");
 					
 					//Aceita o canal.
 					int NewWindowChannel = accept(NewServer, (struct sockaddr*)&SocketAddress, (socklen_t*)&addrlen);
@@ -717,7 +723,10 @@ bool ChooseChannel(int NewClient, string nick, string  ip, int flag){
 				sendMessageWelcome+=rest.substr(0, sz) + '\n';
 				
 				if(flagAdmin) sendMessageWelcome += "You are admin this channel !!\n";
-				
+									
+				//Informando que o usuario conectou-se ao server.
+				cout << nick << " joined the channel #" << channel << endl;		
+			
 				//Mandando a mensagem de boas vindas ao canal.
 				send(ChannelSocket[NewClient], sendMessageWelcome.c_str(), sendMessageWelcome.size(), 0);
 				send(NewClient, message_welcomeclient, strlen(message_welcomeclient), 0);
@@ -727,9 +736,7 @@ bool ChooseChannel(int NewClient, string nick, string  ip, int flag){
 			else 
 				send(NewClient, message_errorchannel, strlen(message_errorchannel), 0);	
 		}
-		
-		//Informando que o usuario conectou-se ao server.
-		cout << nick << " joined the channel #" << channel << endl;		
+		m.unlock();
 		
 		return true;
 		
