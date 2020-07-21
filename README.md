@@ -33,6 +33,10 @@ Para fechar a conexão basta digitar **/quit** ou usar o comando **CTRL + D**
 
 Todos os canais seguem a mesma regra para o nome **#(Número)** (Por exemplo: #0 e #55).
 
+Para convidar um usuáro para participar do seu canal ele deve ter entrado em 1 canal pelo menos.
+
+Caso coloque números aleatórios para o IP e a Porta o programa irá travar e o terminal terá que ser fechado.
+
 Disposição dos terminais para melhor uso do programa e exemplo de uma conxeão do cliente.
 
 <img src="img/redes-img-0.png">
@@ -42,7 +46,6 @@ Disposição dos terminais para melhor uso do programa e exemplo de uma conxeão
 - /quit - O cliente fecha a conexão e fecha a aplicação.
 - /ping - O servidor retorna **pong** assim que receber a mensagem.
 - /join #(Número) - Entra no canal.
-- /join #(Número) -i - Cria um canal apenas para convidados.
 - /nickname ApelidoDesejado - Muda o nickname pelo apelido especificado.
 
 ## Comandos apenas para os administradores dos canais
@@ -50,7 +53,9 @@ Disposição dos terminais para melhor uso do programa e exemplo de uma conxeão
 - /mute nickname - Impede que o usuário com o nickname especificado mande mensagem.
 - /unmute nickname - Retira o mute do usuário.
 - /whois nickname - Retorna o endereço de IP do usuário apenas para o adm do canal.
-- /invite nickname - Convida o usuário para participar do canal em que o admin faz parte (Funciona apenas para canais criados com a flag -i).
+- /mode +i - Ativa o canal apenas para convidados.
+- /mode -i - Desativa o canal apenas para convidados.
+- /invite nickname - Convida o usuário para participar do canal em que o admin faz parte (Funciona apenas para canais com o modo +i ativado).
 
 ## Sobre
 > Versão Linux: Ubuntu 20.04 LTS
